@@ -80,7 +80,7 @@ const Navbar = ({
                 <FaBars size={22} />
               </button>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent tracking-tight select-none">
-                Edison
+                Hustum
               </h1>
             </div>
 
