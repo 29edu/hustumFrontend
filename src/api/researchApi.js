@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:5000/api/research";
+const BASE_URL = `${import.meta.env.VITE_API_URL}/api/research`;
 
 export const researchApi = {
   getAll: async () => {

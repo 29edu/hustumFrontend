@@ -23,9 +23,7 @@ import { profileApi } from "./api/profileApi";
 
 function AppContent() {
   const { isAuthenticated, user, login, register, logout } = useAuth();
-  const [activeSection, setActiveSection] = useState(
-    () => localStorage.getItem("activeSection") || "dashboard",
-  );
+  const [activeSection, setActiveSection] = useState("dashboard");
   const [activeSubject, setActiveSubject] = useState(null);
   const [profilePic, setProfilePic] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(
@@ -36,11 +34,6 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem("isSidebarOpen", isSidebarOpen);
   }, [isSidebarOpen]);
-
-  // Persist active section across refreshes
-  useEffect(() => {
-    localStorage.setItem("activeSection", activeSection);
-  }, [activeSection]);
 
   useEffect(() => {
     if (isAuthenticated && user) {

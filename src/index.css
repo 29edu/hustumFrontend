@@ -2,23 +2,23 @@
 
 /* ─── CSS CUSTOM PROPERTIES ─────────────────────────────────── */
 :root {
-  --bg-base: #f8fafc;
+  --bg-base: #ffffff;
   --bg-surface: #ffffff;
-  --bg-elevated: #f1f5f9;
-  --bg-subtle: #e2e8f0;
+  --bg-elevated: #f8fafc;
+  --bg-subtle: #f1f5f9;
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
   --text-faint: #94a3b8;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border: #eef2f7;
+  --border-strong: #e2e8f0;
   --ring: #bfdbfe;
   --nav-bg: #ffffff;
   --sidebar-bg: #ffffff;
   --input-bg: #ffffff;
   --card-bg: #ffffff;
   --card-hover: #f8fafc;
-  --scrollbar: #cbd5e1;
+  --scrollbar: #e2e8f0;
 }
 
 html.dark {

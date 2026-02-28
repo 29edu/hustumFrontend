@@ -1,23 +1,57 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import {
-  FaCalendarAlt,
   FaClock,
   FaCheckCircle,
   FaBook,
   FaFire,
   FaChartLine,
   FaPlus,
-  FaTasks,
   FaTimes,
+  FaBolt,
+  FaRegSun,
+  FaMoon,
+  FaArrowRight,
+  FaTrophy,
+  FaRegCalendarAlt,
 } from "react-icons/fa";
 import { useTheme } from "../context/ThemeContext";
 import { todoApi } from "../api/todoApi";
 import { studyApi } from "../api/studyApi";
 import { habitApi } from "../api/habitApi";
+import { ratingApi } from "../api/ratingApi";
+
+const QUOTES = [
+  {
+    text: "The secret of getting ahead is getting started.",
+    author: "Mark Twain",
+  },
+  {
+    text: "It always seems impossible until it's done.",
+    author: "Nelson Mandela",
+  },
+  {
+    text: "Don't watch the clock; do what it does. Keep going.",
+    author: "Sam Levenson",
+  },
+  { text: "Focus on being productive instead of busy.", author: "Tim Ferriss" },
+  {
+    text: "You don't have to be great to start, but you have to start to be great.",
+    author: "Zig Ziglar",
+  },
+  {
+    text: "Success is the sum of small efforts repeated day in and day out.",
+    author: "Robert Collier",
+  },
+  {
+    text: "Your future is created by what you do today, not tomorrow.",
+    author: "Robert Kiyosaki",
+  },
+];
 
 const DashboardPage = ({ user }) => {
   const { isDark } = useTheme();
   const [currentDate] = useState(new Date());
+  const [liveTime, setLiveTime] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [todos, setTodos] = useState([]);
   const [studyStats, setStudyStats] = useState({
@@ -25,9 +59,14 @@ const DashboardPage = ({ user }) => {
     sessions: 0,
   });
   const [habits, setHabits] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [yesterdayRating, setYesterdayRating] = useState(null);
+  const [, setLoading] = useState(true);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [quoteIndex] = useState(() =>
+    Math.floor(Math.random() * QUOTES.length),
+  );
+  const [activeTab, setActiveTab] = useState("today"); // "today" | "upcoming"
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -37,9 +76,37 @@ const DashboardPage = ({ user }) => {
     status: "not started",
   });
 
+  // Live clock
+  useEffect(() => {
+    const timer = setInterval(() => setLiveTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     fetchDashboardData();
   }, [selectedDate]);
+
+  useEffect(() => {
+    const fetchYesterdayRating = async () => {
+      try {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yStr = yesterday.toISOString().split("T")[0];
+        const userId = user?.email;
+        if (!userId) return;
+        const data = await ratingApi.getRatingsByDate(userId, yStr);
+        if (Array.isArray(data) && data.length > 0) {
+          const total = data.reduce((s, r) => s + (r.score || 0), 0);
+          setYesterdayRating({ total, count: data.length });
+        } else {
+          setYesterdayRating({ total: 0, count: 0 });
+        }
+      } catch {
+        setYesterdayRating({ total: 0, count: 0 });
+      }
+    };
+    fetchYesterdayRating();
+  }, [user]);
 
   const fetchDashboardData = async () => {
     try {
@@ -243,13 +310,56 @@ const DashboardPage = ({ user }) => {
     }
   };
 
-  const getProgressEmoji = (pct) => {
-    if (pct === 100) return "💯";
-    if (pct >= 75) return "💪";
-    if (pct >= 50) return "😊";
-    if (pct >= 25) return "😐";
-    if (pct > 0) return "😟";
-    return "😴";
+  const getGreeting = () => {
+    const h = liveTime.getHours();
+    if (h < 12)
+      return {
+        text: "Good Morning",
+        icon: <FaRegSun className="text-yellow-400" />,
+      };
+    if (h < 17)
+      return {
+        text: "Good Afternoon",
+        icon: <FaBolt className="text-orange-400" />,
+      };
+    return {
+      text: "Good Evening",
+      icon: <FaMoon className="text-indigo-400" />,
+    };
+  };
+
+  const getRatingEmoji = (total) => {
+    if (total < 10) return { emoji: "😴", label: "Very low", color: "#94a3b8" };
+    if (total < 20) return { emoji: "😞", label: "Low", color: "#ef4444" };
+    if (total < 30)
+      return { emoji: "😔", label: "Below avg", color: "#f97316" };
+    if (total < 40) return { emoji: "😐", label: "Average", color: "#f59e0b" };
+    if (total < 50) return { emoji: "🙂", label: "Fair", color: "#eab308" };
+    if (total < 60) return { emoji: "😊", label: "Good", color: "#84cc16" };
+    if (total < 70)
+      return { emoji: "😁", label: "Very good", color: "#22c55e" };
+    if (total < 80) return { emoji: "🌟", label: "Great", color: "#10b981" };
+    if (total < 90)
+      return { emoji: "🔥", label: "Excellent", color: "#3b82f6" };
+    return { emoji: "🏆", label: "Outstanding", color: "#8b5cf6" };
+  };
+
+  const formatLiveTime = () => {
+    return liveTime.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const formatLiveDate = () => {
+    return liveTime.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const handleNavigate = (section) => {
@@ -345,375 +455,820 @@ const DashboardPage = ({ user }) => {
       : 0;
   const { hours, blocks } = getTimeBlocks();
   const days = getDaysInMonth();
+  const greeting = getGreeting();
+  const ratingInfo =
+    yesterdayRating && yesterdayRating.count > 0
+      ? getRatingEmoji(yesterdayRating.total)
+      : null;
+  const quote = QUOTES[quoteIndex];
+  const { completed: habitsCompleted, total: habitsTotal } =
+    getTodayHabitStats();
+
+  // ── Upcoming tasks ───────────────────────────────────────────────────────
+  const upcomingTodos = getUpcomingTodos();
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: "var(--bg-base)" }}
-    >
-      <div className="max-w-[1600px] mx-auto">
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Stats Cards */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Today's Progress */}
-              <div
-                className="rounded-2xl p-6 shadow-sm"
-                style={{
-                  backgroundColor: "var(--card-bg)",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-blue-100 rounded-xl">
-                    <FaCheckCircle className="text-blue-600 text-2xl" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-2xl"
-                      title={`${todayProgress}% complete`}
-                    >
-                      {getProgressEmoji(todayProgress)}
-                    </span>
-                    <span className="text-3xl font-bold text-blue-600">
-                      {todayProgress}%
-                    </span>
-                  </div>
-                </div>
-                <h3 className="text-gray-600 font-medium">Daily Progress</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {completedToday} of {todayTodos.length} tasks done
-                </p>
-              </div>
+    <div className="min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* ── HERO HEADER ──────────────────────────────────────────────── */}
+        <div
+          className="rounded-2xl sm:rounded-3xl overflow-hidden relative"
+          style={{
+            background: isDark
+              ? "linear-gradient(135deg, #1e293b 0%, #111827 50%, #0f172a 100%)"
+              : "linear-gradient(135deg, #ffffff 0%, #f8fafc 60%, #f1f5f9 100%)",
+            boxShadow: isDark
+              ? "0 8px 32px rgba(0,0,0,0.5)"
+              : "0 8px 32px rgba(148,163,184,0.25)",
+          }}
+        >
+          {/* subtle grid pattern overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-10"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(255,255,255,0.15) 40px,rgba(255,255,255,0.15) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,255,255,0.15) 40px,rgba(255,255,255,0.15) 41px)",
+            }}
+          />
 
-              {/* Study Time */}
-              <div
-                className="rounded-2xl p-6 shadow-sm"
-                style={{
-                  backgroundColor: "var(--card-bg)",
-                  border: "1px solid var(--border)",
-                }}
+          <div className="relative z-10 p-5 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Left – greeting */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                {greeting.icon}
+                <span
+                  className="text-sm font-medium tracking-wide uppercase"
+                  style={{
+                    color: isDark ? "rgba(255,255,255,0.8)" : "#64748b",
+                  }}
+                >
+                  {greeting.text}
+                </span>
+              </div>
+              <h1
+                className="text-2xl sm:text-4xl font-extrabold leading-tight"
+                style={{ color: isDark ? "#ffffff" : "#0f172a" }}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-purple-100 rounded-xl">
-                    <FaBook className="text-purple-600 text-2xl" />
-                  </div>
-                  <span className="text-3xl font-bold text-purple-600">
-                    {formatDuration(studyStats.totalDuration)}
+                {user?.name || user?.username || "Welcome back"} 👋
+              </h1>
+              <p
+                className="text-sm mt-1 max-w-md hidden sm:block"
+                style={{ color: isDark ? "rgba(255,255,255,0.7)" : "#475569" }}
+              >
+                &ldquo;{quote.text}&rdquo;
+                <span
+                  className="ml-1"
+                  style={{
+                    color: isDark ? "rgba(255,255,255,0.5)" : "#64748b",
+                  }}
+                >
+                  — {quote.author}
+                </span>
+              </p>
+            </div>
+
+            {/* Right – live clock */}
+            <div
+              className="rounded-2xl px-5 py-4 text-right flex-shrink-0"
+              style={{
+                backgroundColor: isDark
+                  ? "rgba(255,255,255,0.12)"
+                  : "rgba(255,255,255,0.85)",
+                border: isDark ? "none" : "1px solid #e2e8f0",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              <p
+                className="text-3xl sm:text-4xl font-mono font-bold tracking-tight tabular-nums"
+                style={{ color: isDark ? "#ffffff" : "#0f172a" }}
+              >
+                {formatLiveTime()}
+              </p>
+              <p
+                className="text-xs sm:text-sm mt-1"
+                style={{ color: isDark ? "rgba(255,255,255,0.7)" : "#475569" }}
+              >
+                {formatLiveDate()}
+              </p>
+            </div>
+          </div>
+
+          {/* Quote on mobile */}
+          <div className="relative z-10 px-5 pb-4 sm:hidden">
+            <p
+              className="text-xs italic"
+              style={{ color: isDark ? "rgba(255,255,255,0.7)" : "#475569" }}
+            >
+              &ldquo;{quote.text}&rdquo; — {quote.author}
+            </p>
+          </div>
+        </div>
+
+        {/* ── PRODUCTIVITY SCORE + STATS ROW ───────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {/* Yesterday's Rating */}
+          <div
+            className="col-span-2 sm:col-span-1 rounded-2xl p-4 sm:p-5 relative overflow-hidden"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            }}
+          >
+            {ratingInfo ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-4xl leading-none">
+                    {ratingInfo.emoji}
+                  </span>
+                  <span
+                    className="text-xs font-bold px-2 py-1 rounded-full"
+                    style={{
+                      backgroundColor: ratingInfo.color + "22",
+                      color: ratingInfo.color,
+                    }}
+                  >
+                    {ratingInfo.label}
                   </span>
                 </div>
-                <h3 className="text-gray-600 font-medium">Study Time</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {studyStats.sessions} sessions today
+                <p
+                  className="font-semibold text-sm mt-3"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Yesterday's Mood
                 </p>
-              </div>
-
-              {/* Habit Streak */}
-              <div
-                className="rounded-2xl p-6 shadow-sm"
-                style={{
-                  backgroundColor: "var(--card-bg)",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-orange-100 rounded-xl">
-                    <FaFire className="text-orange-600 text-2xl" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-2xl"
-                      title={`${getHabitCompletionRate()}% complete`}
-                    >
-                      {getProgressEmoji(getHabitCompletionRate())}
-                    </span>
-                    <span className="text-3xl font-bold text-orange-600">
-                      {getHabitCompletionRate()}%
-                    </span>
-                  </div>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Score: {yesterdayRating.total} · {yesterdayRating.count}{" "}
+                  categor{yesterdayRating.count === 1 ? "y" : "ies"}
+                </p>
+                <div className="mt-3 h-1.5 rounded-full bg-gray-100">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.min((yesterdayRating.total / 100) * 100, 100)}%`,
+                      backgroundColor: ratingInfo.color,
+                    }}
+                  />
                 </div>
-                <h3 className="text-gray-600 font-medium">Habit Progress</h3>
-                <p className="text-sm text-gray-500 mt-1">Today's completion</p>
-              </div>
-            </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-4xl leading-none">🤷</span>
+                </div>
+                <p
+                  className="font-semibold text-sm mt-3"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Yesterday's Mood
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  No rating logged yesterday
+                </p>
+              </>
+            )}
+          </div>
 
-            {/* Today Tasks */}
+          {/* Daily Progress */}
+          <div
+            className="rounded-2xl p-4 sm:p-5 relative overflow-hidden"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                <FaCheckCircle className="text-blue-600 text-lg" />
+              </div>
+              <span className="text-3xl font-extrabold text-blue-600">
+                {todayProgress}%
+              </span>
+            </div>
+            <p
+              className="font-semibold text-sm"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Daily Progress
+            </p>
+            <p
+              className="text-xs mt-0.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {completedToday}/{todayTodos.length} tasks done
+            </p>
+            <div className="mt-3 h-1.5 rounded-full bg-blue-100">
+              <div
+                className="h-full rounded-full bg-blue-500 transition-all duration-700"
+                style={{ width: `${todayProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Study Time */}
+          <div
+            className="rounded-2xl p-4 sm:p-5 relative overflow-hidden"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                <FaBook className="text-purple-600 text-lg" />
+              </div>
+              <span className="text-3xl font-extrabold text-purple-600">
+                {formatDuration(studyStats.totalDuration)}
+              </span>
+            </div>
+            <p
+              className="font-semibold text-sm"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Study Time
+            </p>
+            <p
+              className="text-xs mt-0.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {studyStats.sessions} sessions today
+            </p>
+            <div className="mt-3 h-1.5 rounded-full bg-purple-100">
+              <div
+                className="h-full rounded-full bg-purple-500 transition-all duration-700"
+                style={{
+                  width: `${Math.min((studyStats.sessions / 5) * 100, 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Habit Progress */}
+          <div
+            className="rounded-2xl p-4 sm:p-5 relative overflow-hidden"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+                <FaFire className="text-orange-500 text-lg" />
+              </div>
+              <span className="text-3xl font-extrabold text-orange-500">
+                {getHabitCompletionRate()}%
+              </span>
+            </div>
+            <p
+              className="font-semibold text-sm"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Habit Progress
+            </p>
+            <p
+              className="text-xs mt-0.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {habitsCompleted}/{habitsTotal} habits today
+            </p>
+            <div className="mt-3 h-1.5 rounded-full bg-orange-100">
+              <div
+                className="h-full rounded-full bg-orange-500 transition-all duration-700"
+                style={{ width: `${getHabitCompletionRate()}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── MAIN CONTENT GRID ─────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+          {/* ── LEFT / MAIN COLUMN ──────────────────────────────────────── */}
+          <div className="xl:col-span-2 space-y-4 sm:space-y-6">
+            {/* Tasks section with tabs */}
             <div
-              className="rounded-2xl p-6 shadow-sm"
+              className="rounded-2xl overflow-hidden"
               style={{
                 backgroundColor: "var(--card-bg)",
                 border: "1px solid var(--border)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
               }}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <FaTasks className="text-green-600" />
-                  {selectedDate.toDateString() === currentDate.toDateString()
-                    ? "Today Tasks"
-                    : selectedDate.toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      }) + " Tasks"}
-                </h2>
-                {selectedDate.toDateString() !== currentDate.toDateString() && (
-                  <button
-                    onClick={() => setSelectedDate(new Date())}
-                    className="text-xs text-blue-600 hover:underline font-medium"
+              {/* Card header */}
+              <div
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 pt-5 pb-4"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
+                <div className="flex items-center gap-2">
+                  {/* Tabs */}
+                  <div
+                    className="flex rounded-xl p-1 gap-1"
+                    style={{ backgroundColor: "var(--bg-elevated)" }}
                   >
-                    Back to today
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                {todayTodos.length > 0 ? (
-                  todayTodos.map((todo) => (
-                    <div
-                      key={todo._id}
-                      className="flex items-center justify-between p-4 rounded-xl transition-all"
-                      style={{
-                        backgroundColor:
-                          todo.status === "completed"
-                            ? isDark
-                              ? "rgba(34,197,94,0.12)"
-                              : "#f0fdf4"
-                            : todo.status === "started"
-                              ? isDark
-                                ? "rgba(59,130,246,0.12)"
-                                : "#eff6ff"
-                              : isDark
-                                ? "rgba(239,68,68,0.12)"
-                                : "#fff5f5",
-                        border: "1px solid",
-                        borderColor:
-                          todo.status === "completed"
-                            ? isDark
-                              ? "rgba(34,197,94,0.3)"
-                              : "#bbf7d0"
-                            : todo.status === "started"
-                              ? isDark
-                                ? "rgba(59,130,246,0.3)"
-                                : "#bfdbfe"
-                              : isDark
-                                ? "rgba(239,68,68,0.3)"
-                                : "#fecaca",
-                        opacity: todo.status === "completed" ? 0.85 : 1,
-                      }}
-                    >
-                      {/* Checkbox */}
+                    {["today", "upcoming"].map((tab) => (
                       <button
-                        onClick={() => handleToggleComplete(todo)}
-                        className="flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all mr-3"
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all capitalize"
                         style={{
-                          borderColor:
-                            todo.status === "completed"
-                              ? "#22c55e"
-                              : todo.status === "started"
-                                ? "#3b82f6"
-                                : "#f87171",
                           backgroundColor:
-                            todo.status === "completed"
-                              ? "#22c55e"
+                            activeTab === tab
+                              ? "var(--bg-surface)"
                               : "transparent",
+                          color:
+                            activeTab === tab
+                              ? "var(--text-primary)"
+                              : "var(--text-muted)",
+                          boxShadow:
+                            activeTab === tab
+                              ? "0 2px 6px rgba(0,0,0,0.1)"
+                              : "none",
                         }}
-                        title={
-                          todo.status === "completed"
-                            ? "Mark as pending"
-                            : "Mark as completed"
-                        }
                       >
-                        {todo.status === "completed" && (
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 10 10"
-                            fill="none"
+                        {tab === "today" ? "Today" : "Upcoming"}
+                        {tab === "today" && todayTodos.length > 0 && (
+                          <span
+                            className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
+                            style={{
+                              backgroundColor:
+                                activeTab === "today"
+                                  ? "#64748b"
+                                  : "var(--bg-subtle)",
+                              color:
+                                activeTab === "today"
+                                  ? "white"
+                                  : "var(--text-muted)",
+                            }}
                           >
-                            <path
-                              d="M1.5 5L4 7.5L8.5 2.5"
-                              stroke="white"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
+                            {todayTodos.length}
+                          </span>
+                        )}
+                        {tab === "upcoming" && upcomingTodos.length > 0 && (
+                          <span
+                            className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
+                            style={{
+                              backgroundColor:
+                                activeTab === "upcoming"
+                                  ? "#475569"
+                                  : "var(--bg-subtle)",
+                              color:
+                                activeTab === "upcoming"
+                                  ? "white"
+                                  : "var(--text-muted)",
+                            }}
+                          >
+                            {upcomingTodos.length}
+                          </span>
                         )}
                       </button>
+                    ))}
+                  </div>
 
-                      <div className="flex-1">
-                        <h4
-                          className="font-semibold"
+                  {activeTab === "today" &&
+                    selectedDate.toDateString() !==
+                      currentDate.toDateString() && (
+                      <button
+                        onClick={() => setSelectedDate(new Date())}
+                        className="text-xs font-medium"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        ← Today
+                      </button>
+                    )}
+                </div>
+
+                <button
+                  onClick={() => setShowTaskModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                  style={{
+                    background: "linear-gradient(135deg,#475569,#334155)",
+                    boxShadow: "0 4px 14px rgba(71,85,105,0.3)",
+                  }}
+                >
+                  <FaPlus className="text-xs" />
+                  Add Task
+                </button>
+              </div>
+
+              {/* Task list */}
+              <div className="p-4 sm:p-5 space-y-2 max-h-[420px] overflow-y-auto">
+                {activeTab === "today" ? (
+                  todayTodos.length > 0 ? (
+                    todayTodos.map((todo) => {
+                      const isCompleted = todo.status === "completed";
+                      const isStarted = todo.status === "started";
+                      return (
+                        <div
+                          key={todo._id}
+                          className="flex items-center gap-3 p-3.5 rounded-xl"
                           style={{
-                            color:
-                              todo.status === "completed"
-                                ? "#9ca3af"
-                                : "var(--text-primary)",
-                            textDecoration:
-                              todo.status === "completed"
-                                ? "line-through"
-                                : "none",
+                            backgroundColor: isCompleted
+                              ? isDark
+                                ? "rgba(34,197,94,0.10)"
+                                : "#f0fdf4"
+                              : isStarted
+                                ? isDark
+                                  ? "rgba(59,130,246,0.10)"
+                                  : "#eff6ff"
+                                : isDark
+                                  ? "rgba(255,255,255,0.04)"
+                                  : "#fafafa",
+                            border: "1px solid",
+                            borderColor: isCompleted
+                              ? isDark
+                                ? "rgba(34,197,94,0.25)"
+                                : "#bbf7d0"
+                              : isStarted
+                                ? isDark
+                                  ? "rgba(59,130,246,0.25)"
+                                  : "#bfdbfe"
+                                : "var(--border)",
                           }}
                         >
-                          {todo.title}
-                        </h4>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {todo.startTime && todo.endTime
-                            ? `${new Date(todo.startTime).toLocaleTimeString(
-                                "en-US",
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )} - ${new Date(todo.endTime).toLocaleTimeString(
-                                "en-US",
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )}`
-                            : todo.deadline
-                              ? new Date(todo.deadline).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )
-                              : "No time set"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            todo.status === "completed"
-                              ? "bg-green-100 text-green-700"
-                              : todo.status === "started"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-red-100 text-red-600"
-                          }`}
-                        >
-                          {todo.status}
-                        </span>
-                        <button
-                          onClick={() => handleEditTask(todo)}
-                          className="p-2 hover:bg-blue-50 rounded-lg transition-all hover:scale-110 active:scale-95 border border-blue-200 hover:border-blue-400 hover:shadow-md"
-                          title="Edit task"
-                        >
-                          <img
-                            src="/uploads/Icons/pencil.png"
-                            alt="Edit"
-                            className="w-5 h-5 object-contain"
-                          />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTask(todo._id)}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-all hover:scale-110 active:scale-95 border border-red-200 hover:border-red-400 hover:shadow-md"
-                          title="Delete task"
-                        >
-                          <img
-                            src="/uploads/Icons/delete.png"
-                            alt="Delete"
-                            className="w-5 h-5 object-contain"
-                          />
-                        </button>
-                      </div>
+                          {/* circle checkbox */}
+                          <button
+                            onClick={() => handleToggleComplete(todo)}
+                            className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                            style={{
+                              borderColor: isCompleted
+                                ? "#22c55e"
+                                : isStarted
+                                  ? "#3b82f6"
+                                  : "#d1d5db",
+                              backgroundColor: isCompleted
+                                ? "#22c55e"
+                                : "transparent",
+                            }}
+                          >
+                            {isCompleted && (
+                              <svg
+                                width="10"
+                                height="10"
+                                viewBox="0 0 10 10"
+                                fill="none"
+                              >
+                                <path
+                                  d="M1.5 5L4 7.5L8.5 2.5"
+                                  stroke="white"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            )}
+                          </button>
+
+                          {/* content */}
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className="font-semibold text-sm truncate"
+                              style={{
+                                color: isCompleted
+                                  ? "var(--text-muted)"
+                                  : "var(--text-primary)",
+                                textDecoration: isCompleted
+                                  ? "line-through"
+                                  : "none",
+                              }}
+                            >
+                              {todo.title}
+                            </p>
+                            <p
+                              className="text-xs mt-0.5"
+                              style={{ color: "var(--text-faint)" }}
+                            >
+                              {todo.startTime && todo.endTime
+                                ? `${new Date(todo.startTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(todo.endTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`
+                                : todo.deadline
+                                  ? new Date(todo.deadline).toLocaleDateString(
+                                      "en-US",
+                                      {
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      },
+                                    )
+                                  : "No time set"}
+                            </p>
+                          </div>
+
+                          {/* badge */}
+                          <span
+                            className="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 hidden sm:inline-flex"
+                            style={{
+                              backgroundColor: isCompleted
+                                ? isDark
+                                  ? "rgba(34,197,94,0.2)"
+                                  : "#dcfce7"
+                                : isStarted
+                                  ? isDark
+                                    ? "rgba(59,130,246,0.2)"
+                                    : "#dbeafe"
+                                  : isDark
+                                    ? "rgba(239,68,68,0.2)"
+                                    : "#fee2e2",
+                              color: isCompleted
+                                ? "#16a34a"
+                                : isStarted
+                                  ? "#2563eb"
+                                  : "#dc2626",
+                            }}
+                          >
+                            {isCompleted
+                              ? "✅ Done"
+                              : isStarted
+                                ? "🔄 In Progress"
+                                : "⏳ Pending"}
+                          </span>
+
+                          {/* actions */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEditTask(todo)}
+                              className="p-1.5 rounded-lg"
+                              title="Edit"
+                            >
+                              <img
+                                src="/uploads/Icons/pencil.png"
+                                alt="Edit"
+                                className="w-4 h-4 object-contain"
+                              />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTask(todo._id)}
+                              className="p-1.5 rounded-lg"
+                              title="Delete"
+                            >
+                              <img
+                                src="/uploads/Icons/delete.png"
+                                alt="Delete"
+                                className="w-4 h-4 object-contain"
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10">
+                      <div className="text-5xl mb-3">📭</div>
+                      <p
+                        className="font-semibold"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        No tasks for today
+                      </p>
+                      <p
+                        className="text-sm mt-1"
+                        style={{ color: "var(--text-faint)" }}
+                      >
+                        Click &ldquo;Add Task&rdquo; to get started
+                      </p>
                     </div>
-                  ))
+                  )
+                ) : upcomingTodos.length > 0 ? (
+                  upcomingTodos.map((todo) => {
+                    const deadline = todo.deadline
+                      ? new Date(todo.deadline)
+                      : null;
+                    const daysLeft = deadline
+                      ? Math.ceil(
+                          (deadline - new Date()) / (1000 * 60 * 60 * 24),
+                        )
+                      : null;
+                    const isUrgent = daysLeft !== null && daysLeft <= 1;
+                    return (
+                      <div
+                        key={todo._id}
+                        className="flex items-center gap-3 p-3.5 rounded-xl"
+                        style={{
+                          backgroundColor: isUrgent
+                            ? isDark
+                              ? "rgba(239,68,68,0.10)"
+                              : "#fff5f5"
+                            : isDark
+                              ? "rgba(255,255,255,0.04)"
+                              : "#fafafa",
+                          border: "1px solid",
+                          borderColor: isUrgent
+                            ? isDark
+                              ? "rgba(239,68,68,0.25)"
+                              : "#fecaca"
+                            : "var(--border)",
+                        }}
+                      >
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                          {isUrgent && (
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="font-semibold text-sm truncate"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {todo.title}
+                          </p>
+                          {deadline && (
+                            <p
+                              className="text-xs mt-0.5"
+                              style={{
+                                color: isUrgent
+                                  ? "#ef4444"
+                                  : "var(--text-faint)",
+                              }}
+                            >
+                              {isUrgent ? "⚠️ Due " : "Due "}
+                              {deadline.toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          )}
+                        </div>
+                        {daysLeft !== null && (
+                          <span
+                            className="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0"
+                            style={{
+                              backgroundColor: isUrgent
+                                ? isDark
+                                  ? "rgba(239,68,68,0.2)"
+                                  : "#fee2e2"
+                                : isDark
+                                  ? "rgba(59,130,246,0.2)"
+                                  : "#dbeafe",
+                              color: isUrgent ? "#dc2626" : "#2563eb",
+                            }}
+                          >
+                            {daysLeft === 0
+                              ? "Today"
+                              : daysLeft === 1
+                                ? "Tomorrow"
+                                : `${daysLeft}d left`}
+                          </span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleEditTask(todo)}
+                            className="p-1.5 rounded-lg"
+                          >
+                            <img
+                              src="/uploads/Icons/pencil.png"
+                              alt="Edit"
+                              className="w-4 h-4 object-contain"
+                            />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTask(todo._id)}
+                            className="p-1.5 rounded-lg"
+                          >
+                            <img
+                              src="/uploads/Icons/delete.png"
+                              alt="Delete"
+                              className="w-4 h-4 object-contain"
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
                 ) : (
-                  <p className="text-center text-gray-400 py-8">
-                    No tasks for today
-                  </p>
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <div className="text-5xl mb-3">🎉</div>
+                    <p
+                      className="font-semibold"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      All caught up!
+                    </p>
+                    <p
+                      className="text-sm mt-1"
+                      style={{ color: "var(--text-faint)" }}
+                    >
+                      No upcoming tasks
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Timeline View */}
+            {/* Timeline */}
             <div
-              className="rounded-2xl p-6 shadow-sm"
+              className="rounded-2xl overflow-hidden"
               style={{
                 backgroundColor: "var(--card-bg)",
                 border: "1px solid var(--border)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
               }}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <FaClock className="text-blue-600" />
+              <div
+                className="flex items-center justify-between px-5 py-4"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
+                <h2
+                  className="font-bold flex items-center gap-2"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  <FaClock className="text-blue-500" />
                   {selectedDate.toDateString() === currentDate.toDateString()
                     ? "Today's Timeline"
                     : selectedDate.toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
-                      }) + "'s Timeline"}
+                      }) + " Timeline"}
                 </h2>
               </div>
 
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              <div className="p-4 sm:p-5 space-y-1 max-h-64 overflow-y-auto">
                 {hours.map((hour) => {
                   const tasksAtHour = blocks.filter((b) => b.hour === hour);
+                  if (tasksAtHour.length === 0 && hour < 6) return null;
                   return (
-                    <div
-                      key={hour}
-                      className="flex items-start gap-4 py-2 border-b border-gray-100 last:border-0"
-                    >
-                      <div className="w-20 text-sm font-medium text-gray-500 flex-shrink-0">
+                    <div key={hour} className="flex items-start gap-3 group">
+                      <div
+                        className="w-14 text-xs font-mono font-semibold flex-shrink-0 pt-2"
+                        style={{ color: "var(--text-faint)" }}
+                      >
                         {hour.toString().padStart(2, "0")}:00
                       </div>
-                      <div className="flex-1 flex flex-wrap gap-2">
-                        {tasksAtHour.length > 0 ? (
-                          tasksAtHour.map((task, idx) => {
-                            const colors = [
-                              "bg-blue-500",
-                              "bg-purple-500",
-                              "bg-pink-500",
-                              "bg-indigo-500",
-                              "bg-cyan-500",
-                              "bg-teal-500",
-                            ];
-                            const colorClass = task.completed
-                              ? "bg-green-500"
-                              : colors[idx % colors.length];
-
-                            const timeLabel = task.isStart
-                              ? `${task.startHour.toString().padStart(2, "0")}:${task.startMinute?.toString().padStart(2, "0")} - ${task.endHour.toString().padStart(2, "0")}:${task.endMinute?.toString().padStart(2, "0")}`
-                              : "";
-
-                            return (
-                              <div
-                                key={`${task.todoId}-${task.hour}`}
-                                className={`${colorClass} text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 group relative ${task.completed ? "line-through" : ""}`}
-                                title={timeLabel || "Ongoing"}
+                      <div
+                        className="flex-1 border-l-2 border-dashed pl-3 py-1 min-h-[28px] flex flex-wrap gap-1.5"
+                        style={{
+                          borderColor:
+                            tasksAtHour.length > 0
+                              ? "#6366f1"
+                              : "var(--border)",
+                        }}
+                      >
+                        {tasksAtHour.map((task, idx) => {
+                          const colors = [
+                            "bg-blue-500",
+                            "bg-violet-500",
+                            "bg-pink-500",
+                            "bg-indigo-500",
+                            "bg-cyan-500",
+                            "bg-teal-500",
+                          ];
+                          const colorClass = task.completed
+                            ? "bg-emerald-500"
+                            : colors[idx % colors.length];
+                          return (
+                            <span
+                              key={`${task.todoId}-${task.hour}`}
+                              className={`${colorClass} text-white px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 relative`}
+                            >
+                              {task.completed && <FaCheckCircle size={10} />}
+                              <span
+                                className={task.completed ? "line-through" : ""}
                               >
-                                {task.completed && <FaCheckCircle size={12} />}
-                                <span>{task.title}</span>
-                                {task.isStart && (
-                                  <span className="text-xs opacity-80">
-                                    ({timeLabel})
+                                {task.title}
+                              </span>
+                              {task.isStart &&
+                                task.startMinute !== undefined && (
+                                  <span className="opacity-70 text-[10px]">
+                                    (
+                                    {task.startHour.toString().padStart(2, "0")}
+                                    :
+                                    {task.startMinute
+                                      .toString()
+                                      .padStart(2, "0")}
+                                    –{task.endHour.toString().padStart(2, "0")}:
+                                    {task.endMinute
+                                      ?.toString()
+                                      .padStart(2, "0")}
+                                    )
                                   </span>
                                 )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteTask(task.todoId);
-                                  }}
-                                  className="ml-1 opacity-0 group-hover:opacity-100 hover:bg-white/20 rounded p-1 transition-all"
-                                  title="Delete task"
-                                >
-                                  <img
-                                    src="/uploads/Icons/delete.png"
-                                    alt="Delete"
-                                    className="w-3 h-3 object-contain brightness-0 invert"
-                                  />
-                                </button>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <span className="text-gray-300 text-sm">-</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTask(task.todoId);
+                                }}
+                                className="ml-0.5 rounded p-0.5"
+                              >
+                                <FaTimes size={8} />
+                              </button>
+                            </span>
+                          );
+                        })}
+                        {tasksAtHour.length === 0 && (
+                          <span
+                            className="text-xs"
+                            style={{ color: "var(--text-faint)" }}
+                          >
+                            —
+                          </span>
                         )}
                       </div>
                     </div>
@@ -723,253 +1278,315 @@ const DashboardPage = ({ user }) => {
             </div>
           </div>
 
-          {/* Right Column - Calendar */}
-          <div className="space-y-6">
+          {/* ── RIGHT COLUMN ─────────────────────────────────────────────── */}
+          <div className="space-y-4 sm:space-y-6">
             {/* Calendar */}
             <div
-              className="rounded-2xl p-6 shadow-sm"
+              className="rounded-2xl overflow-hidden"
               style={{
                 backgroundColor: "var(--card-bg)",
                 border: "1px solid var(--border)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
               }}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">
+              <div
+                className="flex items-center justify-between px-5 py-4"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
+                <h2
+                  className="font-bold flex items-center gap-2"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  <FaRegCalendarAlt className="text-blue-500" />
                   {selectedDate.toLocaleDateString("en-US", {
                     month: "long",
                     year: "numeric",
                   })}
                 </h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() =>
-                      setSelectedDate(
-                        new Date(
-                          selectedDate.getFullYear(),
-                          selectedDate.getMonth() - 1,
-                        ),
-                      )
-                    }
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-all"
-                  >
-                    ←
-                  </button>
-                  <button
-                    onClick={() =>
-                      setSelectedDate(
-                        new Date(
-                          selectedDate.getFullYear(),
-                          selectedDate.getMonth() + 1,
-                        ),
-                      )
-                    }
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-all"
-                  >
-                    →
-                  </button>
+                <div className="flex gap-1">
+                  {[
+                    { dir: -1, label: "←" },
+                    { dir: 1, label: "→" },
+                  ].map(({ dir, label }) => (
+                    <button
+                      key={dir}
+                      onClick={() =>
+                        setSelectedDate(
+                          new Date(
+                            selectedDate.getFullYear(),
+                            selectedDate.getMonth() + dir,
+                          ),
+                        )
+                      }
+                      className="w-8 h-8 flex items-center justify-center rounded-lg font-bold text-lg"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-7 gap-2 mb-2">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                  (day) => (
+              <div className="p-4">
+                <div className="grid grid-cols-7 mb-2">
+                  {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
                     <div
-                      key={day}
-                      className="text-center text-xs font-semibold text-gray-500 py-2"
+                      key={i}
+                      className="text-center text-xs font-bold py-1"
+                      style={{ color: "var(--text-faint)" }}
                     >
-                      {day}
+                      {d}
                     </div>
-                  ),
-                )}
-              </div>
-
-              <div className="grid grid-cols-7 gap-2">
-                {days.map((day, index) => {
-                  const isToday =
-                    day === currentDate.getDate() &&
-                    selectedDate.getMonth() === currentDate.getMonth() &&
-                    selectedDate.getFullYear() === currentDate.getFullYear();
-
-                  const isSelected = day === selectedDate.getDate() && !isToday;
-
-                  const hasTasks =
-                    day &&
-                    todos.some((todo) => {
-                      const checkDate = todo.startTime
-                        ? new Date(todo.startTime)
-                        : todo.deadline
-                          ? new Date(todo.deadline)
-                          : null;
-                      if (!checkDate) return false;
-                      return (
-                        checkDate.getDate() === day &&
-                        checkDate.getMonth() === selectedDate.getMonth() &&
-                        checkDate.getFullYear() === selectedDate.getFullYear()
-                      );
-                    });
-
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        if (day) {
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {days.map((day, index) => {
+                    const isToday =
+                      day === currentDate.getDate() &&
+                      selectedDate.getMonth() === currentDate.getMonth() &&
+                      selectedDate.getFullYear() === currentDate.getFullYear();
+                    const isSelected = day === selectedDate.getDate();
+                    const hasTasks =
+                      day &&
+                      todos.some((todo) => {
+                        const checkDate = todo.startTime
+                          ? new Date(todo.startTime)
+                          : todo.deadline
+                            ? new Date(todo.deadline)
+                            : null;
+                        return (
+                          checkDate &&
+                          checkDate.getDate() === day &&
+                          checkDate.getMonth() === selectedDate.getMonth() &&
+                          checkDate.getFullYear() === selectedDate.getFullYear()
+                        );
+                      });
+                    return (
+                      <div
+                        key={index}
+                        onClick={() =>
+                          day &&
                           setSelectedDate(
                             new Date(
                               selectedDate.getFullYear(),
                               selectedDate.getMonth(),
                               day,
                             ),
-                          );
+                          )
                         }
-                      }}
-                      className={`aspect-square flex items-center justify-center text-sm rounded-lg transition-all ${
-                        !day
-                          ? ""
-                          : isToday
-                            ? "bg-blue-600 text-white font-bold cursor-pointer"
+                        className="aspect-square flex flex-col items-center justify-center text-sm rounded-xl relative"
+                        style={{
+                          cursor: day ? "pointer" : "default",
+                          backgroundColor: isToday
+                            ? "#334155"
+                            : isSelected && !isToday
+                              ? isDark
+                                ? "rgba(100,116,139,0.25)"
+                                : "#e2e8f0"
+                              : "transparent",
+                          color: isToday
+                            ? "white"
                             : isSelected
-                              ? "bg-blue-200 text-blue-800 font-bold ring-2 ring-blue-400 cursor-pointer"
-                              : hasTasks
-                                ? "bg-blue-100 text-blue-700 font-medium hover:bg-blue-200 cursor-pointer"
-                                : "hover:bg-gray-100 cursor-pointer"
-                      }`}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
+                              ? "#334155"
+                              : day
+                                ? "var(--text-primary)"
+                                : "transparent",
+                          fontWeight: isToday || isSelected ? "700" : "400",
+                        }}
+                      >
+                        {day}
+                        {hasTasks && (
+                          <div
+                            className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full"
+                            style={{
+                              backgroundColor: isToday
+                                ? "rgba(255,255,255,0.7)"
+                                : "#64748b",
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
             {/* Quick Actions */}
             <div
-              className="rounded-2xl p-6 shadow-sm"
+              className="rounded-2xl overflow-hidden"
               style={{
                 backgroundColor: "var(--card-bg)",
                 border: "1px solid var(--border)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
               }}
             >
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Quick Actions
-              </h2>
-              <div className="space-y-3">
-                <button
-                  onClick={() => setShowTaskModal(true)}
-                  className="w-full flex items-center gap-3 p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all text-left"
+              <div
+                className="px-5 py-4"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
+                <h2
+                  className="font-bold flex items-center gap-2"
+                  style={{ color: "var(--text-primary)" }}
                 >
-                  <div className="p-2 bg-blue-600 rounded-lg">
-                    <FaPlus className="text-white" />
-                  </div>
-                  <span className="font-semibold text-blue-900">
-                    Add New Task
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleNavigate("tracker")}
-                  className="w-full flex items-center gap-3 p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-all text-left"
-                >
-                  <div className="p-2 bg-purple-600 rounded-lg">
-                    <FaBook className="text-white" />
-                  </div>
-                  <span className="font-semibold text-purple-900">
-                    Log Study Session
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleNavigate("analysis")}
-                  className="w-full flex items-center gap-3 p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-all text-left"
-                >
-                  <div className="p-2 bg-green-600 rounded-lg">
-                    <FaChartLine className="text-white" />
-                  </div>
-                  <span className="font-semibold text-green-900">
-                    View Analytics
-                  </span>
-                </button>
+                  <FaBolt className="text-yellow-500" />
+                  Quick Actions
+                </h2>
+              </div>
+              <div className="p-4 space-y-2">
+                {[
+                  {
+                    label: "Add New Task",
+                    icon: <FaPlus />,
+                    gradient: "linear-gradient(135deg,#3b82f6,#6366f1)",
+                    shadow: "rgba(59,130,246,0.3)",
+                    action: () => setShowTaskModal(true),
+                  },
+                  {
+                    label: "Log Study Session",
+                    icon: <FaBook />,
+                    gradient: "linear-gradient(135deg,#8b5cf6,#a855f7)",
+                    shadow: "rgba(139,92,246,0.3)",
+                    action: () => handleNavigate("tracker"),
+                  },
+                  {
+                    label: "View Analytics",
+                    icon: <FaChartLine />,
+                    gradient: "linear-gradient(135deg,#10b981,#059669)",
+                    shadow: "rgba(16,185,129,0.3)",
+                    action: () => handleNavigate("analysis"),
+                  },
+                  {
+                    label: "Manage Habits",
+                    icon: <FaFire />,
+                    gradient: "linear-gradient(135deg,#f97316,#ef4444)",
+                    shadow: "rgba(249,115,22,0.3)",
+                    action: () => handleNavigate("habit"),
+                  },
+                ].map(({ label, icon, gradient, shadow, action }) => (
+                  <button
+                    key={label}
+                    onClick={action}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left"
+                    style={{
+                      backgroundColor: isDark
+                        ? "rgba(255,255,255,0.04)"
+                        : "#f8fafc",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <div
+                      className="p-2 rounded-lg flex-shrink-0"
+                      style={{
+                        background: gradient,
+                        boxShadow: `0 4px 10px ${shadow}`,
+                      }}
+                    >
+                      <span className="text-white text-sm">{icon}</span>
+                    </div>
+                    <span
+                      className="font-semibold text-sm flex-1"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {label}
+                    </span>
+                    <FaArrowRight
+                      className="text-xs opacity-30"
+                      style={{ color: "var(--text-faint)" }}
+                    />
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Today's Habits */}
             <div
-              className="rounded-2xl p-6 shadow-sm"
+              className="rounded-2xl overflow-hidden"
               style={{
                 backgroundColor: "var(--card-bg)",
                 border: "1px solid var(--border)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
               }}
             >
-              <div className="flex items-center justify-between mb-4">
+              <div
+                className="flex items-center justify-between px-5 py-4"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
                 <h2
-                  className="text-xl font-bold flex items-center gap-2"
+                  className="font-bold flex items-center gap-2"
                   style={{ color: "var(--text-primary)" }}
                 >
                   <FaFire className="text-orange-500" />
                   Today's Habits
                 </h2>
-                {habits.length > 0 &&
-                  (() => {
-                    const { completed, total } = getTodayHabitStats();
-                    const pct =
-                      total > 0 ? Math.round((completed / total) * 100) : 0;
-                    return (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-orange-600">
-                          {completed}/{total}
-                        </span>
-                        <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-orange-500 rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-bold text-orange-600">
-                          {pct}%
-                        </span>
-                      </div>
-                    );
-                  })()}
+                {habitsTotal > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-xs font-bold"
+                      style={{ color: "#f97316" }}
+                    >
+                      {habitsCompleted}/{habitsTotal}
+                    </span>
+                    <div
+                      className="w-16 h-1.5 rounded-full"
+                      style={{ backgroundColor: "var(--bg-elevated)" }}
+                    >
+                      <div
+                        className="h-full rounded-full bg-orange-500 transition-all duration-500"
+                        style={{
+                          width: `${habitsTotal > 0 ? (habitsCompleted / habitsTotal) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {habits.length === 0 ? (
-                <p className="text-center text-gray-400 py-6 text-sm">
-                  No habits yet.{" "}
-                  <button
-                    onClick={() => handleNavigate("habit")}
-                    className="text-orange-500 hover:underline font-medium"
-                  >
-                    Add habits
-                  </button>
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {habits.map((habit) => {
+              <div className="p-4 space-y-2 max-h-60 overflow-y-auto">
+                {habits.length === 0 ? (
+                  <div className="flex flex-col items-center py-6">
+                    <div className="text-3xl mb-2">🔥</div>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      No habits yet.
+                    </p>
+                    <button
+                      onClick={() => handleNavigate("habit")}
+                      className="text-xs font-medium mt-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Add your first habit →
+                    </button>
+                  </div>
+                ) : (
+                  habits.map((habit) => {
                     const today = new Date().getDate();
                     const isDoneToday = habit.completedDays?.includes(today);
                     return (
                       <button
                         key={habit._id}
                         onClick={() => handleToggleHabit(habit._id)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
+                        className="w-full flex items-center gap-3 p-3 rounded-xl text-left"
                         style={{
                           backgroundColor: isDoneToday
                             ? isDark
-                              ? "rgba(249,115,22,0.15)"
+                              ? "rgba(249,115,22,0.12)"
                               : "#fff7ed"
                             : isDark
-                              ? "rgba(255,255,255,0.05)"
-                              : "#f9fafb",
+                              ? "rgba(255,255,255,0.04)"
+                              : "#fafafa",
                           border: "1px solid",
                           borderColor: isDoneToday
                             ? isDark
-                              ? "rgba(249,115,22,0.4)"
+                              ? "rgba(249,115,22,0.35)"
                               : "#fed7aa"
-                            : isDark
-                              ? "rgba(255,255,255,0.1)"
-                              : "#e5e7eb",
+                            : "var(--border)",
                         }}
                       >
-                        {/* Checkbox */}
                         <div
-                          className="flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all"
+                          className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
                           style={{
                             borderColor: isDoneToday ? "#f97316" : "#d1d5db",
                             backgroundColor: isDoneToday
@@ -979,8 +1596,8 @@ const DashboardPage = ({ user }) => {
                         >
                           {isDoneToday && (
                             <svg
-                              width="12"
-                              height="12"
+                              width="10"
+                              height="10"
                               viewBox="0 0 10 10"
                               fill="none"
                             >
@@ -994,13 +1611,11 @@ const DashboardPage = ({ user }) => {
                             </svg>
                           )}
                         </div>
-
-                        {/* Habit name */}
                         <span
-                          className="flex-1 text-sm font-medium"
+                          className="flex-1 text-sm font-medium truncate"
                           style={{
                             color: isDoneToday
-                              ? "#9ca3af"
+                              ? "var(--text-muted)"
                               : "var(--text-primary)",
                             textDecoration: isDoneToday
                               ? "line-through"
@@ -1009,31 +1624,53 @@ const DashboardPage = ({ user }) => {
                         >
                           {habit.name}
                         </span>
-
-                        {/* Monthly mini progress */}
-                        <span className="text-xs text-gray-400">
-                          {habit.completedDays?.length || 0}d this month
+                        <span
+                          className="text-xs flex-shrink-0 px-2 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: isDark
+                              ? "rgba(255,255,255,0.06)"
+                              : "#f1f5f9",
+                            color: "var(--text-faint)",
+                          }}
+                        >
+                          {habit.completedDays?.length || 0}d
                         </span>
                       </button>
                     );
-                  })}
-                </div>
-              )}
+                  })
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Add Task Modal */}
+      {/* ── ADD/EDIT TASK MODAL ───────────────────────────────────────────── */}
       {showTaskModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
           <div
-            className="rounded-2xl shadow-2xl max-w-md w-full p-6"
-            style={{ backgroundColor: "var(--card-bg)" }}
+            className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {editingTask ? "Edit Task" : "Add New Task"}
+            {/* Modal header */}
+            <div
+              className="px-6 pt-6 pb-4 flex items-center justify-between"
+              style={{ borderBottom: "1px solid var(--border)" }}
+            >
+              <h2
+                className="text-xl font-bold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {editingTask ? "✏️ Edit Task" : "Add New Task"}
               </h2>
               <button
                 onClick={() => {
@@ -1048,15 +1685,21 @@ const DashboardPage = ({ user }) => {
                     status: "not started",
                   });
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-all"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-lg leading-none"
+                style={{ color: "var(--text-muted)" }}
               >
-                <FaTimes className="text-gray-600" />
+                ×
               </button>
             </div>
 
-            <form onSubmit={handleAddTask} className="space-y-4">
+            {/* Modal body */}
+            <form onSubmit={handleAddTask} className="px-6 py-5 space-y-4">
+              {/* Task Title */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   Task Title
                 </label>
                 <input
@@ -1066,13 +1709,22 @@ const DashboardPage = ({ user }) => {
                   onChange={(e) =>
                     setNewTask({ ...newTask, title: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                  style={{
+                    backgroundColor: "var(--bg-elevated)",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--text-primary)",
+                  }}
                   placeholder="Enter task title"
                 />
               </div>
 
+              {/* Description */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   Description
                 </label>
                 <textarea
@@ -1080,14 +1732,23 @@ const DashboardPage = ({ user }) => {
                   onChange={(e) =>
                     setNewTask({ ...newTask, description: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
+                  style={{
+                    backgroundColor: "var(--bg-elevated)",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--text-primary)",
+                  }}
                   placeholder="Enter description (optional)"
                   rows="3"
                 />
               </div>
 
+              {/* Deadline */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   Deadline (Optional)
                 </label>
                 <input
@@ -1096,43 +1757,69 @@ const DashboardPage = ({ user }) => {
                   onChange={(e) =>
                     setNewTask({ ...newTask, deadline: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                  style={{
+                    backgroundColor: "var(--bg-elevated)",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--text-primary)",
+                  }}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Start / End Time */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "var(--text-primary)" }}
+                  >
                     Start Time
                   </label>
                   <input
                     type="time"
                     required
-                    value={newTask.startTime ? newTask.startTime : ""}
-                    onChange={(e) => {
-                      setNewTask({ ...newTask, startTime: e.target.value });
+                    value={newTask.startTime}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, startTime: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                    style={{
+                      backgroundColor: "var(--bg-elevated)",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--text-primary)",
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "var(--text-primary)" }}
+                  >
                     End Time
                   </label>
                   <input
                     type="time"
                     required
-                    value={newTask.endTime ? newTask.endTime : ""}
-                    onChange={(e) => {
-                      setNewTask({ ...newTask, endTime: e.target.value });
+                    value={newTask.endTime}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, endTime: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                    style={{
+                      backgroundColor: "var(--bg-elevated)",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--text-primary)",
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
               </div>
 
+              {/* Status dropdown */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   Status
                 </label>
                 <select
@@ -1140,27 +1827,54 @@ const DashboardPage = ({ user }) => {
                   onChange={(e) =>
                     setNewTask({ ...newTask, status: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none appearance-none"
+                  style={{
+                    backgroundColor: "var(--bg-elevated)",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--text-primary)",
+                    cursor: "pointer",
+                  }}
                 >
-                  <option value="not started">Not Started</option>
-                  <option value="started">Started</option>
-                  <option value="completed">Completed</option>
+                  <option value="not started">⏳ Not Started</option>
+                  <option value="started">🔄 In Progress</option>
+                  <option value="completed">✅ Completed</option>
                 </select>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              {/* Footer buttons */}
+              <div className="flex gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => setShowTaskModal(false)}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all font-semibold"
+                  onClick={() => {
+                    setShowTaskModal(false);
+                    setEditingTask(null);
+                    setNewTask({
+                      title: "",
+                      description: "",
+                      deadline: "",
+                      startTime: "",
+                      endTime: "",
+                      status: "not started",
+                    });
+                  }}
+                  className="flex-1 py-3 rounded-xl font-semibold text-sm"
+                  style={{
+                    backgroundColor: "var(--bg-elevated)",
+                    color: "var(--text-primary)",
+                    border: "1.5px solid var(--border)",
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold"
+                  className="flex-1 py-3 rounded-xl font-bold text-sm text-white"
+                  style={{
+                    backgroundColor: "#2563eb",
+                    boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
+                  }}
                 >
-                  {editingTask ? "Update Task" : "Add Task"}
+                  {editingTask ? "✏️ Update Task" : "Add Task"}
                 </button>
               </div>
             </form>

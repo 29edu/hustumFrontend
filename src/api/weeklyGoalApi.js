@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/weekly-goals";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/weekly-goals`;
 
 export const weeklyGoalApi = {
   getGoals: async (userId, weekStart, weekEnd) => {

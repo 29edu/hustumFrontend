@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/studies";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/studies`;
 
 export const studyApi = {
   // Get all study entries with optional filters
