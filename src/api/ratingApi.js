@@ -1,4 +1,4 @@
-const API_URL = "https://hustumbackend.onrender.com/api/ratings";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/ratings`;
 
 export const ratingApi = {
   // Upsert a rating entry

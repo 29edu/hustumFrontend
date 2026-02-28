@@ -1,4 +1,4 @@
-const API_URL = "https://hustumbackend.onrender.com/api/auth";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/auth`;
 
 export const authApi = {
   async register({ name, email, password }) {

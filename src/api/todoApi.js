@@ -1,4 +1,4 @@
-const API_URL = "https://hustumbackend.onrender.com/api/todos";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/todos`;
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

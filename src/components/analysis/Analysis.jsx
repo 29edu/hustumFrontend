@@ -15,7 +15,7 @@ const Analysis = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        "https://hustumbackend.onrender.com/api/todos/analytics/today",
+        `${import.meta.env.VITE_API_URL}/api/todos/analytics/today`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await response.json();

@@ -1,4 +1,4 @@
-const API_URL = "https://hustumbackend.onrender.com/api/profile";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/profile`;
 
 export const profileApi = {
   async getProfile(userId) {

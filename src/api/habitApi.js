@@ -1,4 +1,4 @@
-const API_URL = "https://hustumbackend.onrender.com/api/habits";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/habits`;
 
 export const habitApi = {
   async getHabits(userId, month) {

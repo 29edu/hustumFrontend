@@ -1,4 +1,4 @@
-const API_BASE = "https://hustumbackend.onrender.com/api/subject-topics";
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/subject-topics`;
 
 export const subjectTopicsApi = {
   getSubjects: async (userId) => {

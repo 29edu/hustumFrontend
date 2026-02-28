@@ -1,4 +1,4 @@
-const API_URL = "https://hustumbackend.onrender.com/api/diary";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/diary`;
 
 export const diaryApi = {
   async getAllDiaries() {
