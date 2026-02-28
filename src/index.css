@@ -1,0 +1,505 @@
+@import "tailwindcss";
+
+/* ─── CSS CUSTOM PROPERTIES ─────────────────────────────────── */
+:root {
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-subtle: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --ring: #bfdbfe;
+  --nav-bg: #ffffff;
+  --sidebar-bg: #ffffff;
+  --input-bg: #ffffff;
+  --card-bg: #ffffff;
+  --card-hover: #f8fafc;
+  --scrollbar: #cbd5e1;
+}
+
+html.dark {
+  color-scheme: dark;
+  --bg-base: #0b1120;
+  --bg-surface: #111827;
+  --bg-elevated: #1e293b;
+  --bg-subtle: #263044;
+  --text-primary: #f1f5f9;
+  --text-secondary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+  --border: #1e293b;
+  --border-strong: #334155;
+  --ring: #1e3a5f;
+  --nav-bg: #111827;
+  --sidebar-bg: #111827;
+  --input-bg: #0b1120;
+  --card-bg: #1e293b;
+  --card-hover: #263044;
+  --scrollbar: #334155;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  transition:
+    background-color 0.25s ease,
+    color 0.2s ease;
+}
+
+/* Smooth theme transition on all elements */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.15s ease,
+    box-shadow 0.2s ease;
+}
+/* Exempt animations from the global transition */
+.animate-spin,
+.animate-pulse,
+.animate-bounce {
+  transition: none !important;
+}
+
+/* ─── SCROLLBAR STYLING ─────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ─── DARK MODE — TAILWIND CLASS OVERRIDES ──────────────────── */
+
+/* Backgrounds */
+html.dark .bg-white {
+  background-color: var(--card-bg) !important;
+}
+html.dark .bg-gray-50 {
+  background-color: var(--bg-base) !important;
+}
+html.dark .bg-gray-100 {
+  background-color: var(--bg-elevated) !important;
+}
+html.dark .bg-gray-200 {
+  background-color: var(--bg-subtle) !important;
+}
+html.dark .bg-gray-300 {
+  background-color: #334155 !important;
+}
+html.dark .bg-blue-50 {
+  background-color: #0f2044 !important;
+}
+html.dark .bg-indigo-50 {
+  background-color: #1a1b4b !important;
+}
+html.dark .bg-purple-50 {
+  background-color: #1e1340 !important;
+}
+html.dark .bg-green-50 {
+  background-color: #0a2818 !important;
+}
+html.dark .bg-red-50 {
+  background-color: #2d0f0f !important;
+}
+html.dark .bg-yellow-50 {
+  background-color: #2d2005 !important;
+}
+html.dark .bg-orange-50 {
+  background-color: #2d1505 !important;
+}
+
+/* Gradient overrides */
+html.dark .from-gray-50 {
+  --tw-gradient-from: var(--bg-base) !important;
+}
+html.dark .from-gray-100 {
+  --tw-gradient-from: var(--bg-elevated) !important;
+}
+html.dark .to-gray-100 {
+  --tw-gradient-to: var(--bg-elevated) !important;
+}
+html.dark .to-gray-50 {
+  --tw-gradient-to: var(--bg-base) !important;
+}
+html.dark .via-white {
+  --tw-gradient-via: var(--bg-elevated) !important;
+}
+html.dark .to-white {
+  --tw-gradient-to: var(--bg-elevated) !important;
+}
+html.dark .from-white {
+  --tw-gradient-from: var(--bg-elevated) !important;
+}
+html.dark .from-indigo-50 {
+  --tw-gradient-from: #1a1b4b !important;
+}
+html.dark .to-purple-50 {
+  --tw-gradient-to: #1e1340 !important;
+}
+html.dark .from-blue-50 {
+  --tw-gradient-from: #0f2044 !important;
+}
+
+/* Text */
+html.dark .text-gray-900 {
+  color: var(--text-primary) !important;
+}
+html.dark .text-gray-800 {
+  color: var(--text-secondary) !important;
+}
+html.dark .text-gray-700 {
+  color: var(--text-muted) !important;
+}
+html.dark .text-gray-600 {
+  color: var(--text-muted) !important;
+}
+html.dark .text-gray-500 {
+  color: var(--text-faint) !important;
+}
+html.dark .text-gray-400 {
+  color: #475569 !important;
+}
+html.dark .text-gray-300 {
+  color: #334155 !important;
+}
+
+/* Borders */
+html.dark .border-gray-50 {
+  border-color: var(--border) !important;
+}
+html.dark .border-gray-100 {
+  border-color: var(--border) !important;
+}
+html.dark .border-gray-200 {
+  border-color: var(--border-strong) !important;
+}
+html.dark .border-gray-300 {
+  border-color: #475569 !important;
+}
+
+/* Inputs */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: var(--input-bg) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-strong) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: var(--text-faint) !important;
+}
+html.dark input[type="checkbox"],
+html.dark input[type="radio"] {
+  accent-color: #3b82f6;
+}
+
+/* Focus rings */
+html.dark .focus\:ring-blue-200:focus,
+html.dark .focus\:ring-blue-100:focus {
+  --tw-ring-color: #1e3a5f !important;
+}
+
+/* Shadows — darker in dark mode */
+html.dark .shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5) !important;
+}
+html.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4) !important;
+}
+html.dark .shadow-md {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.6),
+    0 2px 4px -1px rgba(0, 0, 0, 0.4) !important;
+}
+html.dark .shadow-lg {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.7),
+    0 4px 6px -2px rgba(0, 0, 0, 0.5) !important;
+}
+html.dark .shadow-xl {
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.8),
+    0 10px 10px -5px rgba(0, 0, 0, 0.6) !important;
+}
+html.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Hover backgrounds */
+html.dark .hover\:bg-gray-50:hover {
+  background-color: var(--bg-elevated) !important;
+}
+html.dark .hover\:bg-gray-100:hover {
+  background-color: var(--bg-subtle) !important;
+}
+html.dark .hover\:bg-white:hover {
+  background-color: var(--card-bg) !important;
+}
+
+/* Dividers */
+html.dark hr {
+  border-color: var(--border-strong) !important;
+}
+
+/* Table */
+html.dark table {
+  color: var(--text-secondary);
+}
+html.dark th {
+  background-color: var(--bg-elevated) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border-strong) !important;
+}
+html.dark td {
+  border-color: var(--border-strong) !important;
+}
+html.dark tr:hover {
+  background-color: var(--bg-subtle) !important;
+}
+
+/* Modal / overlaid cards */
+html.dark .rounded-2xl {
+} /* handled by bg-white override above */
+
+/* Semi-transparent overlays — darken in dark mode */
+html.dark .bg-white\/40 {
+  background-color: rgba(17, 24, 39, 0.85) !important;
+}
+html.dark .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+html.dark .bg-white\/20 {
+  background-color: rgba(0, 0, 0, 0.35) !important;
+}
+html.dark .bg-white\/30 {
+  background-color: rgba(15, 25, 40, 0.8) !important;
+}
+html.dark .bg-white\/60 {
+  background-color: rgba(17, 24, 39, 0.9) !important;
+}
+html.dark .bg-black\/50 {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Backdrop-blur cards work with the above */
+
+/* ─── SEMANTIC UTILITY CLASSES ──────────────────────────────── */
+/* Use these for new components to auto-support dark mode */
+.theme-bg {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+.theme-surface {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+.theme-card {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.theme-input {
+  background-color: var(--input-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
+}
+.theme-text {
+  color: var(--text-primary);
+}
+.theme-muted {
+  color: var(--text-muted);
+}
+.theme-border {
+  border-color: var(--border);
+}
+.theme-nav {
+  background-color: var(--nav-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── DARK MODE ─────────────────────────────────────────────── */
+html.dark {
+  color-scheme: dark;
+}
+html.dark body {
+  background: #0f172a;
+}
+
+/* Backgrounds */
+html.dark .bg-white {
+  background-color: #1e293b !important;
+}
+html.dark .bg-gray-50 {
+  background-color: #0f172a !important;
+}
+html.dark .bg-gray-100 {
+  background-color: #1e293b !important;
+}
+html.dark .bg-gray-200 {
+  background-color: #334155 !important;
+}
+html.dark .bg-blue-50 {
+  background-color: #1e3a5f !important;
+}
+html.dark .bg-indigo-50 {
+  background-color: #1e2f5e !important;
+}
+html.dark .bg-purple-50 {
+  background-color: #2d1f5e !important;
+}
+html.dark .bg-green-50 {
+  background-color: #14312a !important;
+}
+html.dark .bg-red-50 {
+  background-color: #3b1414 !important;
+}
+html.dark .bg-yellow-50 {
+  background-color: #3b2e14 !important;
+}
+html.dark .from-gray-50 {
+  --tw-gradient-from: #0f172a !important;
+}
+html.dark .to-gray-100 {
+  --tw-gradient-to: #1e293b !important;
+}
+html.dark .from-indigo-50 {
+  --tw-gradient-from: #1e2f5e !important;
+}
+html.dark .via-white {
+  --tw-gradient-via: #1e293b !important;
+}
+html.dark .to-purple-50 {
+  --tw-gradient-to: #2d1f5e !important;
+}
+html.dark .to-white {
+  --tw-gradient-to: #1e293b !important;
+}
+
+/* Text */
+html.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+html.dark .text-gray-800 {
+  color: #e2e8f0 !important;
+}
+html.dark .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+html.dark .text-gray-600 {
+  color: #94a3b8 !important;
+}
+html.dark .text-gray-500 {
+  color: #64748b !important;
+}
+html.dark .text-gray-400 {
+  color: #475569 !important;
+}
+
+/* Borders */
+html.dark .border-gray-100 {
+  border-color: #334155 !important;
+}
+html.dark .border-gray-200 {
+  border-color: #334155 !important;
+}
+html.dark .border-gray-300 {
+  border-color: #475569 !important;
+}
+
+/* Inputs */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #475569 !important;
+}
+
+/* Shadows — lighten slightly in dark mode */
+html.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4) !important;
+}
+html.dark .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
+}
+html.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.6) !important;
+}
+html.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Hover states */
+html.dark .hover\:bg-gray-50:hover {
+  background-color: #334155 !important;
+}
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #1e293b !important;
+}
+
+/* Dividers */
+html.dark hr {
+  border-color: #334155 !important;
+}
+
+/* Modal backdrop already dark enough; just fix modal card */
+html.dark .rounded-2xl.bg-white,
+html.dark .rounded-xl.bg-white,
+html.dark .rounded-lg.bg-white {
+  background-color: #1e293b !important;
+}
+
+/* ─── Drawer slide-in animation ─────────────────────────────── */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-slideIn {
+  animation: slideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
