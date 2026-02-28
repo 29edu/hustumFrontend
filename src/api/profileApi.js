@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/profile";
+const API_URL = "https://hustumbackend.onrender.com/api/profile";
 
 export const profileApi = {
   async getProfile(userId) {

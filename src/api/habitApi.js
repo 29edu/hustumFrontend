@@ -1,9 +1,9 @@
-const API_URL = "http://localhost:5000/api/habits";
+const API_URL = "https://hustumbackend.onrender.com/api/habits";
 
 export const habitApi = {
   async getHabits(userId, month) {
     const response = await fetch(
-      `${API_URL}/${encodeURIComponent(userId)}/${month}`
+      `${API_URL}/${encodeURIComponent(userId)}/${month}`,
     );
     if (!response.ok) throw new Error("Failed to fetch habits");
     return response.json();

@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:5000/api/improvement";
+const BASE_URL = "https://hustumbackend.onrender.com/api/improvement";
 
 export const improvementApi = {
   getAllEntries: async () => {

@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/todos";
+const API_URL = "https://hustumbackend.onrender.com/api/todos";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

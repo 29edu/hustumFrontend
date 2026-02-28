@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/diary";
+const API_URL = "https://hustumbackend.onrender.com/api/diary";
 
 export const diaryApi = {
   async getAllDiaries() {

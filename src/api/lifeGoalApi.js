@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/life-goals";
+const API_URL = "https://hustumbackend.onrender.com/api/life-goals";
 
 export const lifeGoalApi = {
   // ── Goals ──────────────────────────────────────────

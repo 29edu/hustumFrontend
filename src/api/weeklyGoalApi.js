@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/weekly-goals";
+const API_URL = "https://hustumbackend.onrender.com/api/weekly-goals";
 
 export const weeklyGoalApi = {
   getGoals: async (userId, weekStart, weekEnd) => {

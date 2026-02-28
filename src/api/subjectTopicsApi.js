@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5000/api/subject-topics";
+const API_BASE = "https://hustumbackend.onrender.com/api/subject-topics";
 
 export const subjectTopicsApi = {
   getSubjects: async (userId) => {
@@ -58,7 +58,7 @@ export const subjectTopicsApi = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(topicData),
-      }
+      },
     );
     if (!res.ok) throw new Error("Failed to add topic");
     return res.json();
@@ -67,7 +67,7 @@ export const subjectTopicsApi = {
   deleteTopic: async (subjectId, sectionId, topicId) => {
     const res = await fetch(
       `${API_BASE}/${subjectId}/sections/${sectionId}/topics/${topicId}`,
-      { method: "DELETE" }
+      { method: "DELETE" },
     );
     if (!res.ok) throw new Error("Failed to delete topic");
     return res.json();

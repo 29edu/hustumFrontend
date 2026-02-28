@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/studies";
+const API_URL = "https://hustumbackend.onrender.com/api/studies";
 
 export const studyApi = {
   // Get all study entries with optional filters
