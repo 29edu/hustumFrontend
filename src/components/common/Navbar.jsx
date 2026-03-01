@@ -16,9 +16,11 @@ import {
   FaFlask,
   FaCompass,
   FaSlidersH,
+  FaBookmark,
 } from "react-icons/fa";
 import { useTheme } from "../../context/ThemeContext";
 import SettingsPanel from "./SettingsPanel";
+import LinksPanel from "./LinksPanel";
 
 const Navbar = ({
   user,
@@ -32,6 +34,7 @@ const Navbar = ({
   const { isDark, toggleTheme } = useTheme();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [linksOpen, setLinksOpen] = useState(false);
 
   const handleNavClick = (section) => {
     if (onSectionChange) onSectionChange(section);
@@ -112,9 +115,40 @@ const Navbar = ({
 
             {/* Right */}
             <div className="flex items-center gap-2">
+              {/* Quick Links Button */}
+              <button
+                onClick={() => {
+                  setLinksOpen((o) => !o);
+                  setSettingsOpen(false);
+                }}
+                title="Quick Links"
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all relative"
+                style={{
+                  backgroundColor: linksOpen
+                    ? "var(--accent)"
+                    : isDark
+                      ? "#1e293b"
+                      : "#f1f5f9",
+                  border: linksOpen
+                    ? "1px solid var(--accent)"
+                    : "1px solid var(--border-strong)",
+                  boxShadow: linksOpen
+                    ? "0 0 0 3px var(--accent-light)"
+                    : "none",
+                }}
+              >
+                <FaBookmark
+                  size={14}
+                  style={{ color: linksOpen ? "#fff" : "var(--text-muted)" }}
+                />
+              </button>
+
               {/* Settings Button */}
               <button
-                onClick={() => setSettingsOpen((o) => !o)}
+                onClick={() => {
+                  setSettingsOpen((o) => !o);
+                  setLinksOpen(false);
+                }}
                 title="Preferences"
                 className="w-9 h-9 rounded-xl flex items-center justify-center transition-all relative"
                 style={{
@@ -271,6 +305,9 @@ const Navbar = ({
 
       {/* ── Settings Panel ────────────────────────── */}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+
+      {/* ── Links Panel ──────────────────────────── */}
+      {linksOpen && <LinksPanel onClose={() => setLinksOpen(false)} />}
 
       {/* ── Sidebar ─────────────────────────────────── */}
       <div
