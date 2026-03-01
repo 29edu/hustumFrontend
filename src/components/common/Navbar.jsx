@@ -15,8 +15,10 @@ import {
   FaStar,
   FaFlask,
   FaCompass,
+  FaSlidersH,
 } from "react-icons/fa";
 import { useTheme } from "../../context/ThemeContext";
+import SettingsPanel from "./SettingsPanel";
 
 const Navbar = ({
   user,
@@ -29,6 +31,7 @@ const Navbar = ({
 }) => {
   const { isDark, toggleTheme } = useTheme();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleNavClick = (section) => {
     if (onSectionChange) onSectionChange(section);
@@ -109,6 +112,31 @@ const Navbar = ({
 
             {/* Right */}
             <div className="flex items-center gap-2">
+              {/* Settings Button */}
+              <button
+                onClick={() => setSettingsOpen((o) => !o)}
+                title="Preferences"
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all relative"
+                style={{
+                  backgroundColor: settingsOpen
+                    ? "var(--accent)"
+                    : isDark
+                      ? "#1e293b"
+                      : "#f1f5f9",
+                  border: settingsOpen
+                    ? "1px solid var(--accent)"
+                    : "1px solid var(--border-strong)",
+                  boxShadow: settingsOpen
+                    ? "0 0 0 3px var(--accent-light)"
+                    : "none",
+                }}
+              >
+                <FaSlidersH
+                  size={14}
+                  style={{ color: settingsOpen ? "#fff" : "var(--text-muted)" }}
+                />
+              </button>
+
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
@@ -240,6 +268,9 @@ const Navbar = ({
           </div>
         </div>
       </nav>
+
+      {/* ── Settings Panel ────────────────────────── */}
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
 
       {/* ── Sidebar ─────────────────────────────────── */}
       <div
