@@ -10,7 +10,7 @@ import {
   FaThumbtack,
   FaExternalLinkAlt,
   FaTag,
-  FaFire,
+  FaClock,
   FaCheck,
   FaBookmark,
   FaGlobe,
@@ -331,7 +331,6 @@ function LinkForm({ initial, onSave, onCancel, isDark }) {
 
 function LinkCard({ link, onVisit, onPin, onEdit, onDelete, isDark }) {
   const [hovered, setHovered] = useState(false);
-  const col = CATEGORY_COLORS[link.category] || CATEGORY_COLORS.Other;
 
   return (
     <div
@@ -347,70 +346,119 @@ function LinkCard({ link, onVisit, onPin, onEdit, onDelete, isDark }) {
         border: `1px solid ${hovered ? "var(--border-strong)" : "var(--border)"}`,
         boxShadow: hovered
           ? isDark
-            ? "0 8px 24px rgba(0,0,0,0.4)"
-            : "0 8px 24px rgba(0,0,0,0.08)"
+            ? "0 8px 32px rgba(0,0,0,0.65), 0 2px 8px rgba(0,0,0,0.4)"
+            : "0 8px 32px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08)"
           : "none",
-        transform: hovered ? "translateY(-2px)" : "translateY(0)",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => onVisit(link)}
     >
-      {/* Pin indicator */}
-      {link.pinned && (
+      {/* Pin dot — only when pinned and not hovered */}
+      {link.pinned && !hovered && (
         <div
-          className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center"
+          className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
           style={{
             background: "var(--accent)",
-            boxShadow: "0 2px 8px var(--accent-light)",
+            boxShadow: "0 1px 6px var(--accent-light)",
           }}
         >
           <FaThumbtack
-            size={8}
+            size={7}
             className="text-white"
             style={{ transform: "rotate(-30deg)" }}
           />
         </div>
       )}
 
-      {/* Action buttons - shown on hover */}
+      {/* Action icons — bottom-right, visible on hover */}
       <div
-        className="absolute top-2.5 right-2.5 flex gap-1 transition-all duration-150"
+        className="absolute bottom-2.5 right-2.5 flex gap-1 transition-all duration-150"
         style={{
-          opacity: hovered && !link.pinned ? 1 : 0,
+          opacity: hovered ? 1 : 0,
           pointerEvents: hovered ? "auto" : "none",
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Pin / Unpin */}
         <button
           onClick={() => onPin(link.id)}
-          title="Pin"
-          className="w-6 h-6 rounded-lg flex items-center justify-center transition-all"
+          title={link.pinned ? "Unpin" : "Pin"}
+          className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
           style={{
-            background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
-            color: "var(--text-muted)",
+            background: link.pinned
+              ? isDark
+                ? "rgba(99,102,241,0.35)"
+                : "rgba(99,102,241,0.2)"
+              : isDark
+                ? "rgba(99,102,241,0.2)"
+                : "rgba(99,102,241,0.1)",
+            color: "#6366f1",
+            border: "1px solid rgba(99,102,241,0.3)",
           }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = isDark
+              ? "rgba(99,102,241,0.45)"
+              : "rgba(99,102,241,0.3)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = link.pinned
+              ? isDark
+                ? "rgba(99,102,241,0.35)"
+                : "rgba(99,102,241,0.2)"
+              : isDark
+                ? "rgba(99,102,241,0.2)"
+                : "rgba(99,102,241,0.1)")
+          }
         >
-          <FaThumbtack size={9} />
+          <FaThumbtack
+            size={8}
+            style={{ transform: link.pinned ? "rotate(-30deg)" : "none" }}
+          />
         </button>
+        {/* Edit */}
         <button
           onClick={() => onEdit(link)}
           title="Edit"
-          className="w-6 h-6 rounded-lg flex items-center justify-center transition-all"
+          className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
           style={{
-            background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
-            color: "var(--text-muted)",
+            background: isDark
+              ? "rgba(16,185,129,0.18)"
+              : "rgba(16,185,129,0.1)",
+            color: "#10b981",
+            border: "1px solid rgba(16,185,129,0.3)",
           }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = isDark
+              ? "rgba(16,185,129,0.32)"
+              : "rgba(16,185,129,0.22)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = isDark
+              ? "rgba(16,185,129,0.18)"
+              : "rgba(16,185,129,0.1)")
+          }
         >
-          <FaEdit size={9} />
+          <FaEdit size={8} />
         </button>
+        {/* Delete */}
         <button
           onClick={() => onDelete(link.id)}
           title="Delete"
-          className="w-6 h-6 rounded-lg flex items-center justify-center transition-all"
-          style={{ background: "rgba(244,63,94,0.12)", color: "#f43f5e" }}
+          className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
+          style={{
+            background: "rgba(244,63,94,0.12)",
+            color: "#f43f5e",
+            border: "1px solid rgba(244,63,94,0.3)",
+          }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = "rgba(244,63,94,0.25)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "rgba(244,63,94,0.12)")
+          }
         >
-          <FaTrash size={9} />
+          <FaTrash size={8} />
         </button>
       </div>
 
@@ -440,14 +488,16 @@ function LinkCard({ link, onVisit, onPin, onEdit, onDelete, isDark }) {
           style={{ color: "var(--text-faint)" }}
         >
           {link.visits > 0 && (
-            <span className="text-xs flex items-center gap-1">
-              <FaFire
-                size={9}
-                style={{
-                  color: link.visits > 5 ? "#f59e0b" : "var(--text-faint)",
-                }}
-              />
-              {link.visits}
+            <span
+              className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
+              style={{
+                background: isDark
+                  ? "rgba(255,255,255,0.07)"
+                  : "rgba(0,0,0,0.06)",
+                color: "var(--text-muted)",
+              }}
+            >
+              {link.visits}×
             </span>
           )}
           <FaExternalLinkAlt
@@ -456,15 +506,6 @@ function LinkCard({ link, onVisit, onPin, onEdit, onDelete, isDark }) {
           />
         </div>
       </div>
-
-      {/* Accent bottom line */}
-      <div
-        className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full transition-all duration-200"
-        style={{
-          background: col.bg,
-          opacity: hovered ? 0.6 : 0,
-        }}
-      />
     </div>
   );
 }
@@ -532,12 +573,12 @@ const LinksPanel = ({ onClose }) => {
     return [...list.filter((l) => l.pinned), ...list.filter((l) => !l.pinned)];
   }, [links, activeFilter, search]);
 
-  const topVisited = useMemo(
+  const recentlyVisited = useMemo(
     () =>
       [...links]
-        .sort((a, b) => b.visits - a.visits)
-        .slice(0, 4)
-        .filter((l) => l.visits > 0),
+        .filter((l) => l.lastVisited)
+        .sort((a, b) => b.lastVisited - a.lastVisited)
+        .slice(0, 3),
     [links],
   );
 
@@ -545,7 +586,11 @@ const LinksPanel = ({ onClose }) => {
   const handleVisit = (link) => {
     window.open(link.url, "_blank", "noopener,noreferrer");
     setLinks((prev) =>
-      prev.map((l) => (l.id === link.id ? { ...l, visits: l.visits + 1 } : l)),
+      prev.map((l) =>
+        l.id === link.id
+          ? { ...l, visits: l.visits + 1, lastVisited: Date.now() }
+          : l,
+      ),
     );
   };
 
@@ -715,48 +760,55 @@ const LinksPanel = ({ onClose }) => {
             </div>
           )}
 
-          {/* ── Top Visited (shown only if exists, not searching) ── */}
-          {topVisited.length > 0 && !search && activeFilter === "All" && (
+          {/* ── Recently Visited ── */}
+          {recentlyVisited.length > 0 && !search && activeFilter === "All" && (
             <div className="mb-5">
               <p
                 className="text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5"
                 style={{ color: "var(--text-faint)" }}
               >
-                <FaFire size={10} style={{ color: "#f59e0b" }} />
-                Most Visited
+                <FaClock size={9} style={{ color: "var(--accent)" }} />
+                Recently Visited
               </p>
               <div className="flex gap-2 flex-wrap">
-                {topVisited.map((link) => (
+                {recentlyVisited.map((link) => (
                   <button
                     key={link.id}
                     onClick={() => handleVisit(link)}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all"
                     style={{
                       background: isDark
-                        ? "rgba(245,158,11,0.08)"
-                        : "rgba(245,158,11,0.08)",
-                      border: "1px solid rgba(245,158,11,0.25)",
+                        ? "rgba(255,255,255,0.04)"
+                        : "rgba(0,0,0,0.03)",
+                      border: "1px solid var(--border-strong)",
                       color: "var(--text-secondary)",
                     }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = isDark
-                        ? "rgba(245,158,11,0.15)"
-                        : "rgba(245,158,11,0.14)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = isDark
-                        ? "rgba(245,158,11,0.08)"
-                        : "rgba(245,158,11,0.08)")
-                    }
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = isDark
+                        ? "rgba(255,255,255,0.08)"
+                        : "rgba(0,0,0,0.06)";
+                      e.currentTarget.style.borderColor = "var(--accent)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = isDark
+                        ? "rgba(255,255,255,0.04)"
+                        : "rgba(0,0,0,0.03)";
+                      e.currentTarget.style.borderColor =
+                        "var(--border-strong)";
+                    }}
                   >
                     <FaviconImg url={link.url} title={link.title} />
                     <span className="font-medium">{link.title}</span>
                     <span
-                      className="text-xs flex items-center gap-0.5"
-                      style={{ color: "#f59e0b" }}
+                      className="text-xs px-1.5 py-0.5 rounded-md font-semibold"
+                      style={{
+                        background: isDark
+                          ? "rgba(255,255,255,0.08)"
+                          : "rgba(0,0,0,0.06)",
+                        color: "var(--text-muted)",
+                      }}
                     >
-                      <FaFire size={9} />
-                      {link.visits}
+                      {link.visits}×
                     </span>
                   </button>
                 ))}
