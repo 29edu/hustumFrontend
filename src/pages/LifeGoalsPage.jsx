@@ -311,12 +311,6 @@ const GoalCard = ({ goal, onOpen, onTogglePin, onDelete }) => {
       }}
       onClick={() => onOpen(goal)}
     >
-      {/* Top colour strip */}
-      <div
-        className="h-1.5 w-full"
-        style={{ backgroundColor: goal.color || cat.color }}
-      />
-
       {/* Pin / Menu */}
       <div
         className="absolute top-3 right-3 flex gap-1 z-10"
