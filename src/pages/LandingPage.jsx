@@ -124,12 +124,16 @@ export default function LandingPage({ onShowAuth }) {
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">⚡</span>
+            <img
+              src="/uploads/Icons/logo.png"
+              alt="Hustum"
+              className="w-8 h-8 rounded-lg object-contain"
+            />
             <span
               className="text-xl font-bold"
               style={{ color: "var(--accent)" }}
             >
-              Hustom
+              Hustum
             </span>
           </div>
           <div className="flex items-center gap-3">

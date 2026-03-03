@@ -162,9 +162,16 @@ const Login = ({ onLogin, onSwitchToRegister, onBackToLanding }) => {
             ← Back to login
           </button>
           <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent mb-2">
-              Hustum
-            </h1>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <img
+                src="/uploads/Icons/logo.png"
+                alt="Hustum"
+                className="w-12 h-12 rounded-xl object-contain"
+              />
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
+                Hustum
+              </h1>
+            </div>
             <p style={{ color: "var(--text-muted)" }}>Reset your password</p>
           </div>
           <div
@@ -400,9 +407,16 @@ const Login = ({ onLogin, onSwitchToRegister, onBackToLanding }) => {
         )}
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent mb-2">
-            Hustum
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <img
+              src="/uploads/Icons/logo.png"
+              alt="Hustum"
+              className="w-12 h-12 rounded-xl object-contain"
+            />
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
+              Hustum
+            </h1>
+          </div>
           <p style={{ color: "var(--text-muted)" }}>
             Welcome back! Please login to continue.
           </p>

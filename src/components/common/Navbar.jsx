@@ -112,9 +112,16 @@ const Navbar = ({
               >
                 <FaBars size={22} />
               </button>
-              <h1 className="text-2xl font-bold bg-linear-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent tracking-tight select-none">
-                Hustum
-              </h1>
+              <div className="flex items-center gap-2 select-none">
+                <img
+                  src="/uploads/Icons/logo.png"
+                  alt="Hustum"
+                  className="w-8 h-8 rounded-lg object-contain"
+                />
+                <h1 className="text-2xl font-bold bg-linear-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent tracking-tight">
+                  Hustum
+                </h1>
+              </div>
             </div>
 
             {/* Centre Nav Links */}
