@@ -20,6 +20,8 @@ import LifeGoalsPage from "./pages/LifeGoalsPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import LibraryPage from "./pages/LibraryPage";
 import ProjectsPage from "./pages/ProjectsPage";
+import ChallengePage from "./pages/ChallengePage";
+import ChatPage from "./pages/ChatPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { profileApi } from "./api/profileApi";
@@ -153,6 +155,8 @@ function AppContent() {
           {activeSection === "diary" && <DiaryPage />}
           {activeSection === "library" && <LibraryPage />}
           {activeSection === "projects" && <ProjectsPage />}
+          {activeSection === "challenges" && <ChallengePage />}
+          {activeSection === "chat" && <ChatPage user={user} />}
           {activeSection === "rating" && <RatingPage />}
           {activeSection === "profile" && (
             <ProfilePage user={user} onProfileUpdate={fetchProfilePic} />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { profileApi } from "../api/profileApi";
+import { chatApi } from "../api/chatApi";
 
 const ProfilePage = ({ user, onProfileUpdate }) => {
   const [profile, setProfile] = useState(null);
@@ -8,6 +9,8 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [profilePic, setProfilePic] = useState("");
   const [profilePicFile, setProfilePicFile] = useState(null);
+  const [chatId, setChatId] = useState("");
+  const [chatIdCopied, setChatIdCopied] = useState(false);
 
   // Password change states
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -19,7 +22,25 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
 
   useEffect(() => {
     fetchProfile();
+    fetchChatId();
   }, []);
+
+  const fetchChatId = async () => {
+    try {
+      const data = await chatApi.getMyChatId();
+      setChatId(data.chatId);
+    } catch (e) {
+      console.error("Error fetching chatId:", e);
+    }
+  };
+
+  const handleCopyChatId = () => {
+    if (!chatId) return;
+    navigator.clipboard.writeText(chatId).then(() => {
+      setChatIdCopied(true);
+      setTimeout(() => setChatIdCopied(false), 2000);
+    });
+  };
 
   const fetchProfile = async () => {
     try {
@@ -185,6 +206,57 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
                   {user.name}
                 </h2>
                 <p className="text-gray-600">Manage your profile information</p>
+                {/* Chat ID Badge */}
+                {chatId && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200">
+                      <span className="text-xs text-blue-500 font-medium">
+                        Your Chat ID:
+                      </span>
+                      <span className="font-mono font-bold text-blue-700 tracking-widest text-sm">
+                        {chatId}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleCopyChatId}
+                      title="Copy Chat ID"
+                      className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors"
+                    >
+                      {chatIdCopied ? (
+                        <svg
+                          className="w-4 h-4 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      Share this ID so others can chat with you
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

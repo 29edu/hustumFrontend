@@ -66,6 +66,7 @@ const Navbar = ({
     { id: "diary", label: "Diary", icon: FaBook },
     { id: "library", label: "Library", icon: FaBookOpen },
     { id: "rating", label: "Ratings", icon: FaStar },
+    { id: "chat", label: "Chat", icon: FaComment },
   ];
 
   // Admin-only sidebar entry
@@ -75,6 +76,7 @@ const Navbar = ({
 
   const navLinks = [
     { id: "pomodoro", label: "Pomodoro" },
+    { id: "challenges", label: "Challenges" },
     { id: "study", label: "Study Material" },
     { id: "library", label: "Library" },
   ];
