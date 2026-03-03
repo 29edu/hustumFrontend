@@ -6,7 +6,6 @@ import {
   FaCalendarCheck,
   FaChartLine,
   FaLightbulb,
-  FaComment,
   FaBook,
   FaBookOpen,
   FaBullseye,
@@ -22,6 +21,8 @@ import {
   FaLifeRing,
   FaStickyNote,
   FaRocket,
+  FaPencilAlt,
+  FaComments,
 } from "react-icons/fa";
 import { useTheme } from "../../context/ThemeContext";
 import SettingsPanel from "./SettingsPanel";
@@ -58,15 +59,14 @@ const Navbar = ({
     { id: "habit", label: "Habit", icon: FaCalendarCheck },
     { id: "weekly-goals", label: "Weekly Goals", icon: FaBullseye },
     { id: "topics", label: "Topics", icon: FaLayerGroup },
-    { id: "improvement", label: "Improvement", icon: FaChartLine },
-    { id: "research", label: "Research", icon: FaFlask },
     { id: "life-goals", label: "Life Goals", icon: FaCompass },
+    { id: "research", label: "Research", icon: FaFlask },
+    { id: "improvement", label: "Improvement", icon: FaChartLine },
     { id: "analysis", label: "Analysis", icon: FaLightbulb },
-    { id: "thoughts", label: "Thoughts", icon: FaComment },
     { id: "diary", label: "Diary", icon: FaBook },
-    { id: "library", label: "Library", icon: FaBookOpen },
+    { id: "thoughts", label: "Thoughts", icon: FaPencilAlt },
     { id: "rating", label: "Ratings", icon: FaStar },
-    { id: "chat", label: "Chat", icon: FaComment },
+    { id: "library", label: "Library", icon: FaBookOpen },
   ];
 
   // Admin-only sidebar entry
@@ -78,6 +78,7 @@ const Navbar = ({
     { id: "pomodoro", label: "Pomodoro" },
     { id: "challenges", label: "Challenges" },
     { id: "study", label: "Study Material" },
+    { id: "chat", label: "Chat" },
     { id: "library", label: "Library" },
   ];
 
