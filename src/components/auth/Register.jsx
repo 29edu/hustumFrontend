@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const Register = ({ onRegister, onSwitchToLogin }) => {
+const Register = ({ onRegister, onSwitchToLogin, onBackToLanding }) => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -42,10 +42,20 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
       style={{ backgroundColor: "var(--bg-base)" }}
     >
       <div className="w-full max-w-md">
+        {/* Back to landing */}
+        {onBackToLanding && (
+          <button
+            onClick={onBackToLanding}
+            className="flex items-center gap-1 text-sm mb-6 hover:opacity-70 transition-opacity"
+            style={{ color: "var(--text-muted)" }}
+          >
+            ← Back to home
+          </button>
+        )}
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent mb-2">
-            Edison
+            Hustum
           </h1>
           <p style={{ color: "var(--text-muted)" }}>
             Create your account to get started.

@@ -2,23 +2,39 @@
 
 /* ─── CSS CUSTOM PROPERTIES ─────────────────────────────────── */
 :root {
-  --bg-base: #f8fafc;
+  --bg-base: #ffffff;
   --bg-surface: #ffffff;
-  --bg-elevated: #f1f5f9;
-  --bg-subtle: #e2e8f0;
+  --bg-elevated: #f8fafc;
+  --bg-subtle: #f1f5f9;
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
   --text-faint: #94a3b8;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border: #eef2f7;
+  --border-strong: #e2e8f0;
   --ring: #bfdbfe;
   --nav-bg: #ffffff;
   --sidebar-bg: #ffffff;
   --input-bg: #ffffff;
   --card-bg: #ffffff;
+  --bg-card: #ffffff;
+  --border-color: #eef2f7;
   --card-hover: #f8fafc;
-  --scrollbar: #cbd5e1;
+  --scrollbar: #e2e8f0;
+  /* Settings-driven variables */
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: rgba(59, 130, 246, 0.12);
+  --accent-light-dark: rgba(59, 130, 246, 0.18);
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-base: 15px;
+  --transition-speed: 0.25s;
+  /* Spacing tokens (affected by compact mode) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
 }
 
 html.dark {
@@ -38,6 +54,8 @@ html.dark {
   --sidebar-bg: #111827;
   --input-bg: #0b1120;
   --card-bg: #1e293b;
+  --bg-card: #1e293b;
+  --border-color: #1e293b;
   --card-hover: #263044;
   --scrollbar: #334155;
 }
@@ -48,16 +66,15 @@ body {
   padding: 0;
   height: 100%;
   overflow: hidden;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--bg-base);
   color: var(--text-primary);
   transition:
-    background-color 0.25s ease,
-    color 0.2s ease;
+    background-color var(--transition-speed) ease,
+    color var(--transition-speed) ease;
 }
 
 /* Smooth theme transition on all elements */
@@ -65,16 +82,117 @@ body {
 *::before,
 *::after {
   transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.15s ease,
-    box-shadow 0.2s ease;
+    background-color var(--transition-speed) ease,
+    border-color var(--transition-speed) ease,
+    color calc(var(--transition-speed) * 0.6) ease,
+    box-shadow var(--transition-speed) ease;
+}
+
+/* ─── COMPACT MODE ───────────────────────────────────────────── */
+html.compact .px-6 {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+html.compact .py-3 {
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+html.compact .py-4 {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+html.compact .gap-3 {
+  gap: 6px !important;
+}
+html.compact .gap-4 {
+  gap: 8px !important;
+}
+html.compact .h-16 {
+  height: 52px !important;
+}
+html.compact .mb-6 {
+  margin-bottom: 12px !important;
+}
+html.compact .mb-4 {
+  margin-bottom: 8px !important;
+}
+
+/* ─── GLASS EFFECT ───────────────────────────────────────────── */
+html:not(.no-glass) .glass-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+html.dark:not(.no-glass) .glass-card {
+  background: rgba(17, 24, 39, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+html.no-glass .glass-card {
+  background: var(--card-bg) !important;
+  backdrop-filter: none !important;
+}
+
+/* Settings panel slide-down animation */
+@keyframes settingsSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.settings-panel-enter {
+  animation: settingsSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 /* Exempt animations from the global transition */
 .animate-spin,
 .animate-pulse,
 .animate-bounce {
   transition: none !important;
+}
+
+/* Bell wiggle for unread notifications */
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(15deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(10deg);
+  }
+  60% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+  90% {
+    transform: rotate(-3deg);
+  }
+}
+
+/* Notification panel slide-in */
+@keyframes notifSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.notif-panel-enter {
+  animation: notifSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* ─── SCROLLBAR STYLING ─────────────────────────────────────── */

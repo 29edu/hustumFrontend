@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import "./App.css";
 import Navbar from "./components/common/Navbar";
-import MePage from "./pages/MePage";
+import PomodoroPage from "./pages/PomodoroPage";
 import StudyMaterialPage from "./pages/StudyMaterialPage";
-import TrackerPage from "./pages/TrackerPage";
 import DashboardPage from "./pages/DashboardPage";
 import AnalysisPage from "./pages/AnalysisPage";
 import DiaryPage from "./pages/DiaryPage";
@@ -14,18 +13,22 @@ import SubjectDetailPage from "./pages/SubjectDetailPage";
 import ProfilePage from "./pages/ProfilePage";
 import RatingPage from "./pages/RatingPage";
 import AuthPage from "./pages/AuthPage";
+import LandingPage from "./pages/LandingPage";
 import ImprovementPage from "./pages/ImprovementPage";
 import ResearchPage from "./pages/ResearchPage";
 import LifeGoalsPage from "./pages/LifeGoalsPage";
+import AdminDashboard from "./pages/AdminDashboard";
+import LibraryPage from "./pages/LibraryPage";
+import ProjectsPage from "./pages/ProjectsPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { profileApi } from "./api/profileApi";
 
 function AppContent() {
   const { isAuthenticated, user, login, register, logout } = useAuth();
-  const [activeSection, setActiveSection] = useState(
-    () => localStorage.getItem("activeSection") || "dashboard",
-  );
+  // null = show landing, "login"/"register" = show auth form
+  const [authView, setAuthView] = useState(null);
+  const [activeSection, setActiveSection] = useState("dashboard");
   const [activeSubject, setActiveSubject] = useState(null);
   const [profilePic, setProfilePic] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(
@@ -36,11 +39,6 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem("isSidebarOpen", isSidebarOpen);
   }, [isSidebarOpen]);
-
-  // Persist active section across refreshes
-  useEffect(() => {
-    localStorage.setItem("activeSection", activeSection);
-  }, [activeSection]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -73,11 +71,22 @@ function AppContent() {
 
   const handleLogout = () => {
     localStorage.removeItem("activeSection");
+    setAuthView(null);
     logout();
   };
 
   if (!isAuthenticated) {
-    return <AuthPage onLogin={handleLogin} onRegister={handleRegister} />;
+    if (!authView) {
+      return <LandingPage onShowAuth={(view) => setAuthView(view)} />;
+    }
+    return (
+      <AuthPage
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        initialView={authView}
+        onBackToLanding={() => setAuthView(null)}
+      />
+    );
   }
 
   return (
@@ -101,12 +110,11 @@ function AppContent() {
         {/* Main Content Area */}
         <div
           className={`flex-1 overflow-y-auto transition-all duration-300 ${
-            isSidebarOpen ? "ml-64" : "ml-0"
+            isSidebarOpen ? "md:ml-64" : "ml-0"
           }`}
           style={{ backgroundColor: "var(--bg-base)" }}
         >
-          {activeSection === "me" && <MePage />}
-          {activeSection === "tracker" && <TrackerPage />}
+          {activeSection === "pomodoro" && <PomodoroPage />}
           {activeSection === "study" && <StudyMaterialPage />}
           {activeSection === "dashboard" && <DashboardPage user={user} />}
           {activeSection === "analysis" && <AnalysisPage />}
@@ -143,10 +151,13 @@ function AppContent() {
             </div>
           )}
           {activeSection === "diary" && <DiaryPage />}
+          {activeSection === "library" && <LibraryPage />}
+          {activeSection === "projects" && <ProjectsPage />}
           {activeSection === "rating" && <RatingPage />}
           {activeSection === "profile" && (
             <ProfilePage user={user} onProfileUpdate={fetchProfilePic} />
           )}
+          {activeSection === "admin" && user?.isAdmin && <AdminDashboard />}
         </div>
       </div>
     </div>

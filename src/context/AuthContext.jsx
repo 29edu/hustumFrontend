@@ -26,7 +26,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const data = await authApi.login(credentials);
-    const userData = { _id: data._id, name: data.name, email: data.email };
+    const userData = {
+      _id: data._id,
+      name: data.name,
+      email: data.email,
+      isAdmin: data.isAdmin || false,
+    };
     setUser(userData);
     setIsAuthenticated(true);
     localStorage.setItem("user", JSON.stringify(userData));
@@ -36,7 +41,12 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (credentials) => {
     const data = await authApi.register(credentials);
-    const userData = { _id: data._id, name: data.name, email: data.email };
+    const userData = {
+      _id: data._id,
+      name: data.name,
+      email: data.email,
+      isAdmin: data.isAdmin || false,
+    };
     setUser(userData);
     setIsAuthenticated(true);
     localStorage.setItem("user", JSON.stringify(userData));
