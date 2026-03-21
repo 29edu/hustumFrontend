@@ -1,650 +1,532 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  FaPlus,
-  FaTimes,
-  FaCheckCircle,
-  FaCircle,
-  FaChevronLeft,
-  FaChevronRight,
+  FaPlus, FaTimes, FaCheckCircle, FaCircle,
+  FaCalendarAlt, FaFire, FaChartBar, FaClock,
+  FaLayerGroup, FaBullseye, FaChevronRight,
   FaFlagCheckered,
-  FaBook,
-  FaBullseye,
 } from "react-icons/fa";
 import { weeklyGoalApi } from "../api/weeklyGoalApi";
 import { useAuth } from "../context/AuthContext";
 
-// Helper: get the Monday of a given date's week
-const getMonday = (date) => {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
+/* ── helpers ───────────────────────────────────────── */
+const fmtShort = (d) =>
+  new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-// Helper: get the Sunday of a given date's week
-const getSunday = (monday) => {
-  const d = new Date(monday);
-  d.setDate(d.getDate() + 6);
-  d.setHours(23, 59, 59, 999);
-  return d;
-};
+const fmtRange = (s, e) =>
+  `${fmtShort(s)} – ${new Date(e).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  })}`;
 
-const formatDateRange = (start, end) => {
-  const opts = { month: "short", day: "numeric" };
-  return `${new Date(start).toLocaleDateString("en-US", opts)} – ${new Date(end).toLocaleDateString("en-US", { ...opts, year: "numeric" })}`;
-};
+const daysDiff = (a, b) =>
+  Math.round((new Date(b) - new Date(a)) / 86400000);
 
-const isSameWeek = (weekStart, referenceMonday) => {
-  return (
-    new Date(weekStart).toDateString() ===
-    new Date(referenceMonday).toDateString()
-  );
+const PRIORITIES = ["High", "Medium", "Low"];
+const PRIO_PREFIX = { High: "[H]", Medium: "[M]", Low: "[L]" };
+const PRIO_COLOR  = { High: "#EF4444", Medium: "#F59E0B", Low: "#10B981" };
+const PRIO_BG     = { High: "#FEF2F2", Medium: "#FFFBEB", Low: "#F0FDF4" };
+
+const encodeTitle = (title, prio) =>
+  prio ? `${PRIO_PREFIX[prio]}${title}` : title;
+
+const decodeTitle = (raw = "") => {
+  for (const p of PRIORITIES) {
+    if (raw.startsWith(PRIO_PREFIX[p]))
+      return { title: raw.slice(PRIO_PREFIX[p].length), priority: p };
+  }
+  return { title: raw, priority: null };
 };
 
 const COLORS = [
-  "#3B82F6",
-  "#8B5CF6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#EC4899",
-  "#06B6D4",
-  "#84CC16",
+  "#6366F1","#8B5CF6","#EC4899","#EF4444",
+  "#F59E0B","#10B981","#06B6D4","#3B82F6",
 ];
 
-const WeeklyGoalsPage = () => {
-  const { user } = useAuth();
-  const [goals, setGoals] = useState([]);
-  const [loading, setLoading] = useState(true);
+/* ═══════════════════════════════════════════════════════
+   Sub-components defined OUTSIDE the parent to prevent
+   React remounting them on every parent re-render,
+   which caused the input focus loss.
+═══════════════════════════════════════════════════════ */
 
-  // Week offset: 0 = current week, 1 = next week, -1 = last week, etc.
-  const [weekOffset, setWeekOffset] = useState(0);
+const TopicRow = ({ topic, goalId, goalColor, onToggle, onDelete }) => (
+  <div style={{
+    display: "flex", alignItems: "center", gap: 10,
+    padding: "7px 0", borderBottom: "1px solid var(--border)",
+    opacity: topic.completed ? 0.55 : 1,
+  }}>
+    <button
+      onClick={() => onToggle(goalId, topic._id)}
+      style={{ flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+    >
+      {topic.completed
+        ? <FaCheckCircle size={17} style={{ color: goalColor }} />
+        : <FaCircle     size={17} style={{ color: "#D1D5DB"  }} />}
+    </button>
+    <span style={{
+      flex: 1, fontSize: 13, color: "var(--text-secondary)",
+      textDecoration: topic.completed ? "line-through" : "none",
+    }}>
+      {topic.title}
+    </span>
+    <button
+      onClick={() => onDelete(goalId, topic._id)}
+      style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", color: "#CBD5E1" }}
+    >
+      <FaTimes size={11} />
+    </button>
+  </div>
+);
 
-  // Modals
-  const [showAddGoal, setShowAddGoal] = useState(false);
-  const [addGoalWeekOffset, setAddGoalWeekOffset] = useState(0);
-  const [newSubject, setNewSubject] = useState("");
-  const [newColor, setNewColor] = useState(COLORS[0]);
+const AddTopicSection = ({ goal, topicInput, onInputChange, onAdd }) => (
+  <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
+    <div style={{ display: "flex", gap: 8 }}>
+      <input
+        type="text"
+        placeholder="Add a task and press Enter..."
+        value={topicInput}
+        onChange={(e) => onInputChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && onAdd()}
+        style={{
+          flex: 1, fontSize: 13, padding: "8px 12px", borderRadius: 9,
+          border: "1.5px solid var(--border-strong)",
+          background: "var(--input-bg)", color: "var(--text-secondary)", outline: "none",
+        }}
+      />
+      <button
+        onClick={onAdd}
+        disabled={!topicInput.trim()}
+        style={{
+          padding: "8px 14px", borderRadius: 9,
+          background: goal.color, color: "#fff",
+          border: "none", cursor: "pointer", fontWeight: 700,
+          opacity: !topicInput.trim() ? 0.4 : 1,
+        }}
+      >
+        <FaPlus size={12} />
+      </button>
+    </div>
+  </div>
+);
 
-  // Add topic state per goal
-  const [topicInputs, setTopicInputs] = useState({});
+const TimelineBar = ({ goal, today }) => {
+  const start   = new Date(goal.weekStart); start.setHours(0, 0, 0, 0);
+  const end     = new Date(goal.weekEnd);   end.setHours(23, 59, 59, 999);
+  const total   = Math.max(daysDiff(start, end), 1);
+  const elapsed = Math.min(Math.max(daysDiff(start, today), 0), total);
+  const pct     = Math.round((elapsed / total) * 100);
+  const inRange = today >= start && today <= end;
 
-  const currentMonday = useMemo(() => {
-    const base = getMonday(new Date());
-    const d = new Date(base);
-    d.setDate(d.getDate() + weekOffset * 7);
-    return d;
-  }, [weekOffset]);
+  return (
+    <div style={{ padding: "10px 16px 6px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+        <span style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 500 }}>{fmtShort(start)}</span>
+        <span style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 500 }}>{fmtShort(end)}</span>
+      </div>
+      <div style={{ position: "relative", height: 8, background: "var(--border)", borderRadius: 999 }}>
+        <div style={{
+          position: "absolute", left: 0, top: 0, height: "100%",
+          width: `${pct}%`, borderRadius: 999,
+          background: `linear-gradient(90deg, ${goal.color}, ${goal.color}99)`,
+          transition: "width 0.4s ease",
+        }} />
+        {inRange && (
+          <div style={{
+            position: "absolute", top: "50%", left: `${pct}%`,
+            transform: "translate(-50%,-50%)",
+            width: 14, height: 14, borderRadius: "50%",
+            background: goal.color, border: "2.5px solid var(--card-bg)",
+            boxShadow: `0 0 0 2px ${goal.color}55`,
+          }} title="Today" />
+        )}
+      </div>
+      <p style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 5, textAlign: "right" }}>
+        {pct}% of timeline elapsed
+      </p>
+    </div>
+  );
+};
 
-  const currentSunday = useMemo(
-    () => getSunday(currentMonday),
-    [currentMonday],
+const RangeCard = ({
+  goal, today,
+  collapsedGoals, setCollapsedGoals,
+  topicInput,
+  onInputChange, onAdd,
+  onToggleTopic, onDeleteTopic,
+  onDeleteGoal,
+}) => {
+  const progress  = goal.topics.length
+    ? Math.round((goal.topics.filter(t => t.completed).length / goal.topics.length) * 100)
+    : 0;
+  const completed = goal.topics.filter(t => t.completed).length;
+  const isDone    = goal.topics.length > 0 && progress === 100;
+  const end       = new Date(goal.weekEnd); end.setHours(23, 59, 59, 999);
+  const start     = new Date(goal.weekStart);
+  const daysLeft  = daysDiff(today, end);
+  const duration  = daysDiff(start, end);
+  const isOverdue = daysLeft < 0;
+  const isExpanded = !collapsedGoals.has(goal._id);
+
+  const sortedTopics = [...goal.topics].sort(
+    (a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0)
   );
 
-  const todayMonday = useMemo(() => getMonday(new Date()), []);
+  return (
+    <div style={{
+      borderRadius: 18, overflow: "hidden",
+      background: "var(--card-bg)",
+      border: isDone ? `2px solid ${goal.color}77` : "1px solid var(--border)",
+      boxShadow: isDone ? `0 0 24px ${goal.color}22` : "0 2px 12px rgba(0,0,0,0.05)",
+    }}>
+      {/* header */}
+      <div style={{
+        padding: "16px 18px",
+        background: `linear-gradient(135deg, ${goal.color}f0, ${goal.color}88)`,
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 12,
+              background: "rgba(255,255,255,0.22)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <FaCalendarAlt size={16} color="#fff" />
+            </div>
+            <div>
+              <p style={{ color: "#fff", fontWeight: 800, fontSize: 15, margin: 0, letterSpacing: -0.3 }}>
+                {goal.subject}
+              </p>
+              <p style={{ color: "rgba(255,255,255,0.78)", fontSize: 11, margin: "2px 0 0" }}>
+                {fmtRange(goal.weekStart, goal.weekEnd)} · {duration + 1}d
+              </p>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            {isDone && <span style={{ fontSize: 16 }}>🎉</span>}
+            <span style={{
+              padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+              background: isOverdue ? "#FEF2F2" : "rgba(255,255,255,0.25)",
+              color: isOverdue ? "#EF4444" : "#fff",
+            }}>
+              {isOverdue ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? "Today!" : `${daysLeft}d left`}
+            </span>
+            <button
+              onClick={() => onDeleteGoal(goal._id)}
+              style={{ background: "rgba(255,255,255,0.18)", border: "none", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}
+            >
+              <FaTimes size={12} color="#fff" />
+            </button>
+          </div>
+        </div>
+        {/* progress */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
+          <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.3)", borderRadius: 999 }}>
+            <div style={{
+              height: "100%", borderRadius: 999, background: "#fff",
+              width: `${progress}%`, transition: "width 0.5s ease",
+            }} />
+          </div>
+          <span style={{ color: "#fff", fontSize: 12, fontWeight: 800, minWidth: 34 }}>{progress}%</span>
+          <span style={{ color: "rgba(255,255,255,0.78)", fontSize: 11 }}>
+            {completed}/{goal.topics.length}
+          </span>
+        </div>
+      </div>
+
+      {/* timeline */}
+      <TimelineBar goal={goal} today={today} />
+
+      {/* expand toggle */}
+      <button
+        onClick={() => setCollapsedGoals(prev => {
+          const next = new Set(prev);
+          if (next.has(goal._id)) next.delete(goal._id); else next.add(goal._id);
+          return next;
+        })}
+        style={{
+          width: "100%", background: "none", border: "none",
+          borderTop: "1px solid var(--border)",
+          padding: "9px 18px", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          color: "var(--text-muted)", fontSize: 12, fontWeight: 600,
+        }}
+      >
+        <span>{isExpanded ? "Hide tasks" : `Tasks (${goal.topics.length})`}</span>
+        <FaChevronRight size={10} style={{
+          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+          transition: "transform 0.2s",
+        }} />
+      </button>
+
+      {/* task list */}
+      {isExpanded && (
+        <div>
+          <div style={{ padding: "4px 16px 0", maxHeight: 260, overflowY: "auto" }}>
+            {sortedTopics.length === 0 && (
+              <p style={{
+                color: "var(--text-faint)", fontSize: 13,
+                textAlign: "center", padding: "18px 0", fontStyle: "italic",
+              }}>
+                No tasks yet — add one below
+              </p>
+            )}
+            {sortedTopics.map((t) => (
+              <TopicRow
+                key={t._id} topic={t}
+                goalId={goal._id} goalColor={goal.color}
+                onToggle={onToggleTopic} onDelete={onDeleteTopic}
+              />
+            ))}
+          </div>
+          <AddTopicSection
+            goal={goal}
+            topicInput={topicInput}
+            onInputChange={onInputChange}
+            onAdd={onAdd}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════
+   Main page component
+═══════════════════════════════════════════════════════ */
+const WeeklyGoalsPage = () => {
+  const { user } = useAuth();
+  const [goals, setGoals]     = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [showModal, setShowModal]       = useState(false);
+  const [newLabel, setNewLabel]         = useState("");
+  const [newColor, setNewColor]         = useState(COLORS[0]);
+  const [newStartDate, setNewStartDate] = useState("");
+  const [newEndDate, setNewEndDate]     = useState("");
+
+  const [topicInputs, setTopicInputs] = useState({});
+  const [collapsedGoals, setCollapsedGoals] = useState(new Set());
+
+  const today = useMemo(() => {
+    const d = new Date(); d.setHours(0, 0, 0, 0); return d;
+  }, []);
 
   useEffect(() => {
     if (!user?.email) return;
     setLoading(true);
-    weeklyGoalApi
-      .getGoals(user.email)
-      .then((data) => setGoals(data))
-      .catch((err) => console.error("Error fetching weekly goals:", err))
+    weeklyGoalApi.getGoals(user.email)
+      .then(setGoals)
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, [user?.email]);
 
-  const goalsForWeek = (monday) =>
-    goals.filter((g) => isSameWeek(g.weekStart, monday));
+  /* stats */
+  const totalTopics     = goals.reduce((s, g) => s + g.topics.length, 0);
+  const completedTopics = goals.reduce((s, g) => s + g.topics.filter(t => t.completed).length, 0);
+  const overallPct      = totalTopics ? Math.round((completedTopics / totalTopics) * 100) : 0;
+  const activeRanges    = goals.filter(g => {
+    const end = new Date(g.weekEnd); end.setHours(23,59,59,999); return end >= today;
+  }).length;
 
-  const currentWeekGoals = goalsForWeek(currentMonday);
-
+  /* handlers */
   const handleAddGoal = async (e) => {
     e.preventDefault();
-    if (!newSubject.trim()) return;
-
-    const base = getMonday(new Date());
-    const monday = new Date(base);
-    monday.setDate(monday.getDate() + addGoalWeekOffset * 7);
-    const sunday = getSunday(monday);
-
+    if (!newLabel.trim() || !newStartDate || !newEndDate) return;
     try {
       const goal = await weeklyGoalApi.createGoal({
         userId: user.email,
-        weekStart: monday.toISOString(),
-        weekEnd: sunday.toISOString(),
-        subject: newSubject.trim(),
-        color: newColor,
-        topics: [],
+        weekStart: new Date(newStartDate + "T00:00:00").toISOString(),
+        weekEnd:   new Date(newEndDate   + "T23:59:59").toISOString(),
+        subject: newLabel.trim(), color: newColor, topics: [],
       });
-      setGoals((prev) => [...prev, goal]);
-      setNewSubject("");
-      setNewColor(COLORS[0]);
-      setShowAddGoal(false);
-      // Navigate to that week
-      setWeekOffset(addGoalWeekOffset);
-    } catch (error) {
-      console.error("Error creating goal:", error);
-    }
+      setGoals(prev => [goal, ...prev]);
+      setNewLabel(""); setNewColor(COLORS[0]);
+      setNewStartDate(""); setNewEndDate("");
+      setShowModal(false);
+      setExpandedGoal(goal._id);
+    } catch (err) { console.error(err); }
   };
 
   const handleDeleteGoal = async (id) => {
     try {
       await weeklyGoalApi.deleteGoal(id);
-      setGoals((prev) => prev.filter((g) => g._id !== id));
-    } catch (error) {
-      console.error("Error deleting goal:", error);
-    }
+      setGoals(prev => prev.filter(g => g._id !== id));
+    } catch (err) { console.error(err); }
   };
 
   const handleAddTopic = async (goalId) => {
-    const title = (topicInputs[goalId] || "").trim();
-    if (!title) return;
-
+    const raw = (topicInputs[goalId] || "").trim();
+    if (!raw) return;
     try {
-      const updated = await weeklyGoalApi.addTopic(goalId, title);
-      setGoals((prev) => prev.map((g) => (g._id === goalId ? updated : g)));
-      setTopicInputs((prev) => ({ ...prev, [goalId]: "" }));
-    } catch (error) {
-      console.error("Error adding topic:", error);
-    }
+      const updated = await weeklyGoalApi.addTopic(goalId, raw);
+      setGoals(prev => prev.map(g => g._id === goalId ? updated : g));
+      setTopicInputs(prev => ({ ...prev, [goalId]: "" }));
+    } catch (err) { console.error(err); }
   };
 
   const handleToggleTopic = async (goalId, topicId) => {
     try {
       const updated = await weeklyGoalApi.toggleTopic(goalId, topicId);
-      setGoals((prev) => prev.map((g) => (g._id === goalId ? updated : g)));
-    } catch (error) {
-      console.error("Error toggling topic:", error);
-    }
+      setGoals(prev => prev.map(g => g._id === goalId ? updated : g));
+    } catch (err) { console.error(err); }
   };
 
   const handleDeleteTopic = async (goalId, topicId) => {
     try {
       const updated = await weeklyGoalApi.deleteTopic(goalId, topicId);
-      setGoals((prev) => prev.map((g) => (g._id === goalId ? updated : g)));
-    } catch (error) {
-      console.error("Error deleting topic:", error);
-    }
+      setGoals(prev => prev.map(g => g._id === goalId ? updated : g));
+    } catch (err) { console.error(err); }
   };
-
-  const getProgress = (goal) => {
-    if (!goal.topics.length) return 0;
-    return Math.round(
-      (goal.topics.filter((t) => t.completed).length / goal.topics.length) *
-        100,
-    );
-  };
-
-  const weekLabel = () => {
-    if (weekOffset === 0) return "This Week";
-    if (weekOffset === 1) return "Next Week";
-    if (weekOffset === -1) return "Last Week";
-    if (weekOffset > 0) return `${weekOffset} weeks from now`;
-    return `${Math.abs(weekOffset)} weeks ago`;
-  };
-
-  const upcomingWeeks = useMemo(() => {
-    // Show a preview summary: this week + next week goals count
-    return [0, 1, 2].map((offset) => {
-      const mon = new Date(todayMonday);
-      mon.setDate(mon.getDate() + offset * 7);
-      const sun = getSunday(mon);
-      const weekGoals = goals.filter((g) => isSameWeek(g.weekStart, mon));
-      return { offset, mon, sun, goals: weekGoals };
-    });
-  }, [goals, todayMonday]);
 
   if (loading) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "var(--bg-base)" }}
-      >
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 font-medium">Loading weekly goals...</p>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 44, height: 44, border: "4px solid #6366F1", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
+          <p style={{ color: "var(--text-faint)", fontWeight: 500 }}>Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: "var(--bg-base)" }}
-    >
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div style={{ minHeight: "100vh", background: "var(--bg-base)", padding: "20px 16px 40px" }}>
+      <div style={{ width: "100%" }}>
+
+        {/* header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <FaBullseye className="text-indigo-600" />
-              Weekly Goals
+            <h1 style={{ margin: 0, fontWeight: 800, fontSize: 26, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
+              <FaBullseye style={{ color: "#6366F1" }} />
+              Goals
             </h1>
-            <p className="text-gray-500 mt-1">
-              Plan and track your learning subjects week by week
+            <p style={{ margin: "4px 0 0", color: "var(--text-faint)", fontSize: 13 }}>
+              Plan and track your goals across any date range
             </p>
           </div>
-          <button
-            onClick={() => {
-              setAddGoalWeekOffset(weekOffset);
-              setShowAddGoal(true);
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg hover:bg-green-700 transition-all duration-200"
-          >
-            <FaPlus size={14} />
-            Add Subject
+          <button onClick={() => setShowModal(true)} style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "10px 20px", borderRadius: 12, border: "none",
+            background: "#2563EB", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(37,99,235,0.35)",
+          }}>
+            <FaPlus size={12} /> New Date Range
           </button>
         </div>
 
-        {/* Upcoming Weeks Overview Strip */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          {upcomingWeeks.map(({ offset, mon, sun, goals: wg }) => (
-            <button
-              key={offset}
-              onClick={() => setWeekOffset(offset)}
-              className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                weekOffset === offset
-                  ? "border-indigo-600 bg-indigo-50 shadow-md"
-                  : "border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm"
-              }`}
-            >
-              <p
-                className={`text-xs font-semibold uppercase tracking-wide mb-1 ${weekOffset === offset ? "text-indigo-600" : "text-gray-400"}`}
-              >
-                {offset === 0
-                  ? "This Week"
-                  : offset === 1
-                    ? "Next Week"
-                    : "In 2 Weeks"}
-              </p>
-              <p className="text-sm text-gray-700 font-medium">
-                {formatDateRange(mon, sun)}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {wg.length} subject{wg.length !== 1 ? "s" : ""}
-                {wg.length > 0 && (
-                  <span className="ml-1 text-indigo-500">
-                    ·{" "}
-                    {wg.reduce(
-                      (a, g) => a + g.topics.filter((t) => t.completed).length,
-                      0,
-                    )}
-                    /{wg.reduce((a, g) => a + g.topics.length, 0)} topics
-                  </span>
-                )}
-              </p>
-            </button>
+        {/* stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 26 }}>
+          {[
+            { icon: <FaLayerGroup size={14} />, label: "Total Ranges",    val: goals.length,   color: "#6366F1" },
+            { icon: <FaChartBar  size={14} />, label: "Overall Progress", val: `${overallPct}%`, color: "#10B981" },
+            { icon: <FaFire      size={14} />, label: "Active Ranges",    val: activeRanges,   color: "#F59E0B" },
+            { icon: <FaClock     size={14} />, label: "Tasks Done",       val: `${completedTopics}/${totalTopics}`, color: "#EC4899" },
+          ].map(({ icon, label, val, color }) => (
+            <div key={label} style={{
+              padding: "14px 16px", borderRadius: 14,
+              background: "var(--card-bg)", border: "1px solid var(--border)",
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", color }}>
+                {icon}
+              </div>
+              <div>
+                <p style={{ margin: 0, fontWeight: 800, fontSize: 18, color: "var(--text-primary)" }}>{val}</p>
+                <p style={{ margin: 0, fontSize: 11, color: "var(--text-faint)" }}>{label}</p>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Week Navigation */}
-        <div
-          className="flex items-center justify-between rounded-2xl shadow-sm px-6 py-4 mb-6"
-          style={{
-            backgroundColor: "var(--card-bg)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          <button
-            onClick={() => setWeekOffset((o) => o - 1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 font-medium transition-colors"
-          >
-            <FaChevronLeft size={14} /> Previous
-          </button>
-
-          <div className="text-center">
-            <span className="text-lg font-bold text-gray-900">
-              {weekLabel()}
-            </span>
-            <p className="text-sm text-gray-500">
-              {formatDateRange(currentMonday, currentSunday)}
-            </p>
-          </div>
-
-          <button
-            onClick={() => setWeekOffset((o) => o + 1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 font-medium transition-colors"
-          >
-            Next <FaChevronRight size={14} />
-          </button>
-        </div>
-
-        {/* Goals for Selected Week */}
-        {currentWeekGoals.length === 0 ? (
-          <div
-            className="text-center py-20 rounded-2xl border border-dashed"
-            style={{
-              backgroundColor: "var(--card-bg)",
-              borderColor: "var(--border-strong)",
-            }}
-          >
-            <FaFlagCheckered size={40} className="text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-500 mb-2">
-              No subjects for {weekLabel().toLowerCase()}
-            </h3>
-            <p className="text-gray-400 text-sm mb-6">
-              Add your first subject to start planning this week.
-            </p>
-            <button
-              onClick={() => {
-                setAddGoalWeekOffset(weekOffset);
-                setShowAddGoal(true);
-              }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-            >
-              <FaPlus size={13} /> Add Subject
+        {/* cards */}
+        {goals.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "70px 20px", borderRadius: 18, border: "2px dashed var(--border-strong)", background: "var(--card-bg)" }}>
+            <FaFlagCheckered size={40} style={{ color: "var(--border-strong)", marginBottom: 14 }} />
+            <p style={{ fontSize: 17, fontWeight: 700, color: "var(--text-faint)", margin: "0 0 6px" }}>No ranges yet</p>
+            <p style={{ fontSize: 13, color: "var(--text-faint)", margin: "0 0 22px" }}>Create your first goal range and start tracking tasks.</p>
+            <button onClick={() => setShowModal(true)} style={{
+              padding: "11px 22px", borderRadius: 11, border: "none",
+              background: "#2563EB", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+            }}>
+              <FaPlus size={11} style={{ marginRight: 7 }} /> New Date Range
             </button>
           </div>
         ) : (
-          <div className="grid gap-5 md:grid-cols-2">
-            {currentWeekGoals.map((goal) => {
-              const progress = getProgress(goal);
-              const completed = goal.topics.filter((t) => t.completed).length;
-              return (
-                <div
-                  key={goal._id}
-                  className="rounded-2xl shadow-sm overflow-hidden"
-                  style={{
-                    backgroundColor: "var(--card-bg)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  {/* Card Header */}
-                  <div
-                    className="px-5 py-4 flex items-center justify-between rounded-t-2xl"
-                    style={{ backgroundColor: goal.color }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center shadow"
-                        style={{
-                          backgroundColor: "rgba(255,255,255,0.25)",
-                          color: "white",
-                        }}
-                      >
-                        <FaBook size={16} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-white text-lg leading-tight">
-                          {goal.subject}
-                        </h3>
-                        <p
-                          className="text-xs"
-                          style={{ color: "rgba(255,255,255,0.8)" }}
-                        >
-                          {completed}/{goal.topics.length} topics completed
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteGoal(goal._id)}
-                      className="transition-colors p-1.5 rounded hover:bg-white/20"
-                      title="Delete subject"
-                    >
-                      <img
-                        src="/uploads/Icons/delete.png"
-                        alt="Delete"
-                        className="w-4 h-4 object-contain brightness-0 invert"
-                      />
-                    </button>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="px-5 py-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-400 font-medium">
-                        Progress
-                      </span>
-                      <span
-                        className="text-xs font-semibold"
-                        style={{ color: goal.color }}
-                      >
-                        {progress}%
-                      </span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${progress}%`,
-                          backgroundColor: goal.color,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Topics List */}
-                  <div className="px-5 py-3 space-y-2 max-h-56 overflow-y-auto">
-                    {goal.topics.length === 0 && (
-                      <p className="text-gray-400 text-sm italic text-center py-2">
-                        No topics yet — add one below
-                      </p>
-                    )}
-                    {goal.topics.map((topic) => (
-                      <div
-                        key={topic._id}
-                        className="flex items-center gap-3 group"
-                      >
-                        <button
-                          onClick={() => handleToggleTopic(goal._id, topic._id)}
-                          className="flex-shrink-0 transition-colors"
-                          style={{
-                            color: topic.completed ? goal.color : "#D1D5DB",
-                          }}
-                        >
-                          {topic.completed ? (
-                            <FaCheckCircle size={18} />
-                          ) : (
-                            <FaCircle size={18} />
-                          )}
-                        </button>
-                        <span
-                          className={`flex-1 text-sm ${
-                            topic.completed
-                              ? "line-through text-gray-400"
-                              : "text-gray-700"
-                          }`}
-                        >
-                          {topic.title}
-                        </span>
-                        <button
-                          onClick={() => handleDeleteTopic(goal._id, topic._id)}
-                          className="text-gray-200 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <FaTimes size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Add Topic Input */}
-                  <div className="px-5 py-3 border-t border-gray-100">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Add a topic..."
-                        value={topicInputs[goal._id] || ""}
-                        onChange={(e) =>
-                          setTopicInputs((prev) => ({
-                            ...prev,
-                            [goal._id]: e.target.value,
-                          }))
-                        }
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && handleAddTopic(goal._id)
-                        }
-                        className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
-                      />
-                      <button
-                        onClick={() => handleAddTopic(goal._id)}
-                        disabled={!(topicInputs[goal._id] || "").trim()}
-                        className="px-3 py-1.5 rounded-lg text-white text-sm font-medium transition-opacity disabled:opacity-40"
-                        style={{ backgroundColor: goal.color }}
-                      >
-                        <FaPlus size={12} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            {goals.map((g) => (
+              <RangeCard
+                key={g._id}
+                goal={g}
+                today={today}
+                collapsedGoals={collapsedGoals}
+                setCollapsedGoals={setCollapsedGoals}
+                topicInput={topicInputs[g._id] || ""}
+                onInputChange={(val) => setTopicInputs(prev => ({ ...prev, [g._id]: val }))}
+                onAdd={() => handleAddTopic(g._id)}
+                onToggleTopic={handleToggleTopic}
+                onDeleteTopic={handleDeleteTopic}
+                onDeleteGoal={handleDeleteGoal}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      {/* Add Subject Modal */}
-      {showAddGoal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div
-            className="rounded-2xl shadow-2xl w-full max-w-md"
-            style={{
-              backgroundColor: "var(--card-bg)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">
-                Add New Subject
-              </h2>
-              <button
-                onClick={() => setShowAddGoal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <FaTimes size={20} />
-              </button>
+      {/* modal */}
+      {showModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+          <div style={{ background: "var(--card-bg)", borderRadius: 20, width: "100%", maxWidth: 460, boxShadow: "0 24px 60px rgba(0,0,0,0.2)", border: "1px solid var(--border)" }}>
+            <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h2 style={{ margin: 0, fontWeight: 800, fontSize: 18, color: "var(--text-primary)" }}>New Date Range</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)" }}><FaTimes size={18} /></button>
             </div>
-
-            <form onSubmit={handleAddGoal} className="p-6 space-y-5">
-              {/* Subject Name */}
+            <form onSubmit={handleAddGoal} style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Subject / Topic Name
-                </label>
-                <input
-                  type="text"
-                  value={newSubject}
-                  onChange={(e) => setNewSubject(e.target.value)}
-                  placeholder="e.g. Mathematics, React, Physics..."
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  autoFocus
-                  required
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.6 }}>Title</label>
+                <input type="text" value={newLabel} onChange={e => setNewLabel(e.target.value)}
+                  placeholder="e.g. Exam Prep, Sprint 3..." required autoFocus
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: 10, fontSize: 14, border: "1.5px solid var(--border-strong)", background: "var(--input-bg)", color: "var(--text-primary)", outline: "none", boxSizing: "border-box" }}
                 />
               </div>
-
-              {/* Week Selector */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Assign to Week
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[-1, 0, 1, 2, 3, 4].map((offset) => {
-                    const mon = new Date(todayMonday);
-                    mon.setDate(mon.getDate() + offset * 7);
-                    const label =
-                      offset === 0
-                        ? "This Week"
-                        : offset === 1
-                          ? "Next Week"
-                          : offset === -1
-                            ? "Last Week"
-                            : `+${offset} Weeks`;
-                    return (
-                      <button
-                        key={offset}
-                        type="button"
-                        onClick={() => setAddGoalWeekOffset(offset)}
-                        className={`px-2 py-2 rounded-lg text-xs font-medium border transition-all ${
-                          addGoalWeekOffset === offset
-                            ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                            : "border-gray-200 text-gray-600 hover:border-indigo-300"
-                        }`}
-                      >
-                        <div>{label}</div>
-                        <div className="text-gray-400 font-normal mt-0.5 text-[10px]">
-                          {mon.toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Color Picker */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Color
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setNewColor(c)}
-                      className={`w-8 h-8 rounded-full transition-all duration-150 ${
-                        newColor === c
-                          ? "ring-2 ring-offset-2 ring-gray-400 scale-110"
-                          : "hover:scale-105"
-                      }`}
-                      style={{ backgroundColor: c }}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {[{ label: "Start Date", val: newStartDate, set: setNewStartDate, min: "" },
+                  { label: "End Date",   val: newEndDate,   set: setNewEndDate,   min: newStartDate }
+                ].map(({ label, val, set, min }) => (
+                  <div key={label}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</label>
+                    <input type="date" value={val} min={min} onChange={e => set(e.target.value)} required
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 13, border: "1.5px solid var(--border-strong)", background: "var(--input-bg)", color: "var(--text-primary)", outline: "none", boxSizing: "border-box" }}
                     />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>Color</label>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {COLORS.map(c => (
+                    <button key={c} type="button" onClick={() => setNewColor(c)} style={{ width: 30, height: 30, borderRadius: "50%", background: c, cursor: "pointer", border: "3px solid transparent", outline: newColor === c ? `3px solid ${c}` : "none", outlineOffset: 2 }} />
                   ))}
                 </div>
               </div>
-
-              {/* Preview */}
-              <div
-                className="flex items-center gap-3 p-3 rounded-xl border-2"
-                style={{
-                  borderColor: newColor,
-                  backgroundColor: `${newColor}11`,
-                }}
-              >
-                <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center text-white"
-                  style={{ backgroundColor: newColor }}
-                >
-                  <FaBook size={15} />
+              {(newLabel || newStartDate) && (
+                <div style={{ padding: "12px 14px", borderRadius: 12, background: `${newColor}12`, border: `1.5px solid ${newColor}55`, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: newColor, display: "flex", alignItems: "center", justifyContent: "center" }}><FaCalendarAlt size={14} color="#fff" /></div>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, color: "var(--text-primary)", fontSize: 14 }}>{newLabel || "Range title"}</p>
+                    <p style={{ margin: 0, fontSize: 11, color: "var(--text-faint)" }}>
+                      {newStartDate && newEndDate ? fmtRange(newStartDate + "T00:00:00", newEndDate + "T00:00:00") : "Pick dates above"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-gray-800">
-                    {newSubject || "Subject name"}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {(() => {
-                      const mon = new Date(todayMonday);
-                      mon.setDate(mon.getDate() + addGoalWeekOffset * 7);
-                      return formatDateRange(mon, getSunday(mon));
-                    })()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAddGoal(false)}
-                  className="flex-1 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl text-white font-semibold shadow transition-all hover:opacity-90"
-                  style={{ backgroundColor: newColor }}
-                >
-                  Add Subject
-                </button>
+              )}
+              <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "1.5px solid var(--border-strong)", background: "none", color: "var(--text-secondary)", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>Cancel</button>
+                <button type="submit" style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: "#2563EB", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Create Range</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
