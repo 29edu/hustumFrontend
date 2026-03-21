@@ -508,7 +508,7 @@ const Navbar = ({
         </div>
 
         {/* Menu Items */}
-        <div className="py-2 overflow-y-auto h-[calc(100%-57px)]">
+        <div className="py-3 px-3 overflow-y-auto h-[calc(100%-57px)] flex flex-col gap-1">
           {allMenuItems.map(({ id, label, icon }) => {
             const NavIcon = icon;
             const active = activeSection === id;
@@ -517,7 +517,7 @@ const Navbar = ({
               <button
                 key={id}
                 onClick={() => handleNavClick(id)}
-                className="w-full flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150"
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-all duration-150 rounded-xl"
                 style={{
                   backgroundColor: active
                     ? isDark
@@ -533,8 +533,7 @@ const Navbar = ({
                       ? "#f59e0b"
                       : "#3b82f6"
                     : "var(--text-secondary)",
-                  borderLeft: `3px solid ${active ? (isAdmin ? "#f59e0b" : "#3b82f6") : "transparent"}`,
-                  fontWeight: active ? "600" : "400",
+                  fontWeight: active ? "600" : "500",
                 }}
                 onMouseEnter={(e) => {
                   if (!active)
